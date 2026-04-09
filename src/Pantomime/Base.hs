@@ -1,6 +1,6 @@
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 module Pantomime.Base
@@ -23,11 +23,10 @@ import GHC.Base
   , Word64#
   , Addr#
   , RuntimeRep (..)
+  , Int (..)
   )
 import GHC.Base qualified as GHC
 import GHC.Exts (IsList (..))
-import GHC.Prim qualified as GHC
-import GHC.Prim.Exception qualified as GHC
 import GHC.Num (Integer(..), Natural (..))
 import GHC.Num qualified as GHC
   ( integerFromNatural
@@ -47,10 +46,13 @@ import GHC.Num.BigNat qualified as GHC
   , bigNatSubWordUnsafe#
   , bigNatSub
   )
-import GHC.TypeLits (KnownNat, SNat, type (<=), type (+))
+import GHC.Prim qualified as GHC
+import GHC.Prim.Exception qualified as GHC
+import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
+import Prelude hiding (undefined)
 import Unsafe.Coerce (unsafeCoerce)
 
 axioms :: PluginAxioms
@@ -94,11 +96,14 @@ axioms = PluginAxioms
     -- Integer to pantomime primitive conversions.
     ----------------------------------------------
     , ('Pantomime.hsi2i, 'hsi2i)
-    , ('Pantomime.hsi2bv, 'hsi2bv)
+    , ('Pantomime.i2hsi, 'i2hsi)
 
     -- System FC primitive operations.
     ----------------------------------
     , ('GHC.tagToEnum#, 'tagToEnum)
+    -- TODO: While these might be deprecated for use, they are in fact required
+    -- in this context... Not sure what to do if these are unexposed (but still
+    -- used internally) in the future.
     , ('GHC.dataToTagSmall#, 'dataToTag)
     , ('GHC.dataToTagLarge#, 'dataToTag)
     , ('GHC.raise#, 'Pantomime.raise)
@@ -122,11 +127,11 @@ axioms = PluginAxioms
     -- , (('GHC.quotInt#, 'quotInt#))
     -- , (('GHC.remInt#, 'remInt#))
     -- , (('GHC.quotRemInt#, 'quotRemInt#))
-    , (('GHC.andI#, 'andI#))
-    , (('GHC.orI#, 'orI#))
-    , (('GHC.xorI#, 'xorI#))
-    , (('GHC.notI#, 'notI#))
-    , (('GHC.negateInt#, 'negateInt#))
+    , ('GHC.andI#, 'andI#)
+    , ('GHC.orI#, 'orI#)
+    , ('GHC.xorI#, 'xorI#)
+    , ('GHC.notI#, 'notI#)
+    , ('GHC.negateInt#, 'negateInt#)
     -- , ('GHC.uncheckedIShiftL#, 'uncheckedIShiftL#)
     -- , ('GHC.uncheckedIShiftRA#, 'uncheckedIShiftRA#)
     -- , ('GHC.uncheckedIShiftRL#, 'uncheckedIShiftRL#)
@@ -240,10 +245,10 @@ axioms = PluginAxioms
     -- , (('GHC.remWord#, 'remWord#))
     -- , (('GHC.quotRemWord#, 'quotRemWord#))
     -- , (('GHC.quotRemWord2#, 'quotRemWord2#))
-    , (('GHC.and#, 'and#))
-    , (('GHC.or#, 'or#))
-    , (('GHC.xor#, 'xor#))
-    , (('GHC.not#, 'not#))
+    , ('GHC.and#, 'and#)
+    , ('GHC.or#, 'or#)
+    , ('GHC.xor#, 'xor#)
+    , ('GHC.not#, 'not#)
     -- , ('GHC.uncheckedShiftL#, 'uncheckedShiftL#)
     , ('GHC.uncheckedShiftRL#, 'uncheckedShiftRL#)
     , ('GHC.eqWord#, 'eqWord#)
@@ -356,9 +361,9 @@ axioms = PluginAxioms
     , ('GHC.naturalAdd, 'naturalAdd)
     , ('GHC.naturalSubThrow, 'naturalSubThrow)
     , ('GHC.noinline, 'noinline)
+    , ('GHC.undefined, 'undefined)
     , ('GHC.patError, 'patError')
     , ('GHC.withSomeSNat, 'withSomeSNat)
-
     ]
   }
 
@@ -1383,18 +1388,6 @@ leWord64# = compareWord64# Pantomime.bvule
 ltWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
 ltWord64# = compareWord64# Pantomime.bvult
 
-hsi2bv
-  :: forall n
-   . Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.KnownNat n
-  => 1 <= n
-  => Integer
-  -> Pantomime.BitVec n
-hsi2bv = \case
-  IS x -> Pantomime.bvsresize @Pantomime.PlatformWordSize $ Pantomime.project x
-  IP _x -> undefined
-  IN _x -> undefined
-
 hsi2i
   :: Pantomime.Embeddable BitVecPW Int#
   => Integer
@@ -1403,6 +1396,24 @@ hsi2i = \case
   IS x -> Pantomime.bv2i @Pantomime.PlatformWordSize $ Pantomime.project x
   IP _x -> undefined
   IN _x -> undefined
+
+i2hsi
+  :: Pantomime.Embeddable BitVecPW Int#
+  => Pantomime.Integer
+  -> Integer
+i2hsi x = do
+  let toI (I# i) = Pantomime.bv2i $ Pantomime.project @_ @_ @BitVecPW i
+  let minI = toI minBound
+  let maxI = toI maxBound
+  if
+    -- TODO: We should actually implement the 'undefined'. It depends on the
+    -- interpretation of ByteArray# though, which we currently do not use. Same
+    -- for the inverse function btw.
+    | x < minI -> undefined
+    | maxI < x -> undefined
+    | otherwise -> do
+      let x' = Pantomime.i2bv @Pantomime.PlatformWordSize x
+      IS $ Pantomime.embed x'
 
 -- TODO: The below definitions exists solely because the unfolding doesn't
 -- exist. There should be a way around this...
@@ -1450,6 +1461,10 @@ naturalSubThrow (NB x) (NB y) = case GHC.bigNatSub x y of
 
 noinline :: a -> a
 noinline = id
+
+-- FIXME: This is not actually the implementation for 'undefined'.
+undefined :: a
+undefined = GHC.raise# ()
 
 -- FIXME: This is not actually the implementation for 'patError'.
 patError' :: forall q (a :: TYPE q). Addr# -> a
