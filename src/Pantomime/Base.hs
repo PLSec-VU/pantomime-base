@@ -7,8 +7,9 @@ module Pantomime.Base
   ( axioms
   ) where
 
-import Control.Exception.Base qualified as GHC (patError)
+import Control.Exception.Base qualified as GHC (patError, throw)
 import Data.Constraint.Unsafe (unsafeSNat)
+import Data.List qualified as GHC (zip)
 import GHC.Base
   ( TYPE
   , Int#
@@ -52,7 +53,7 @@ import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
-import Prelude hiding (undefined)
+import Prelude hiding (undefined, map, zip)
 import Unsafe.Coerce (unsafeCoerce)
 
 axioms :: PluginAxioms
@@ -124,9 +125,9 @@ axioms = PluginAxioms
     , ('GHC.subIntC#, 'subIntC#)
     -- , ('GHC.timesInt2#, 'timesInt2#)
     -- , ('GHC.mulIntMayOflo#, 'mulIntMayOflo#)
-    -- , (('GHC.quotInt#, 'quotInt#))
-    -- , (('GHC.remInt#, 'remInt#))
-    -- , (('GHC.quotRemInt#, 'quotRemInt#))
+    -- , ('GHC.quotInt#, 'quotInt#)
+    -- , ('GHC.remInt#, 'remInt#)
+    -- , ('GHC.quotRemInt#, 'quotRemInt#)
     , ('GHC.andI#, 'andI#)
     , ('GHC.orI#, 'orI#)
     , ('GHC.xorI#, 'xorI#)
@@ -241,10 +242,10 @@ axioms = PluginAxioms
     , ('GHC.subWordC#, 'subWordC#)
     -- , ('GHC.plusWord2#, 'plusWord2#)
     -- , ('GHC.timesWord2#, 'timesWord2#)
-    -- , (('GHC.quotWord#, 'quotWord#))
-    -- , (('GHC.remWord#, 'remWord#))
-    -- , (('GHC.quotRemWord#, 'quotRemWord#))
-    -- , (('GHC.quotRemWord2#, 'quotRemWord2#))
+    -- , ('GHC.quotWord#, 'quotWord#)
+    -- , ('GHC.remWord#, 'remWord#)
+    -- , ('GHC.quotRemWord#, 'quotRemWord#)
+    -- , ('GHC.quotRemWord2#, 'quotRemWord2#)
     , ('GHC.and#, 'and#)
     , ('GHC.or#, 'or#)
     , ('GHC.xor#, 'xor#)
@@ -362,8 +363,11 @@ axioms = PluginAxioms
     , ('GHC.naturalSubThrow, 'naturalSubThrow)
     , ('GHC.noinline, 'noinline)
     , ('GHC.undefined, 'undefined)
+    , ('GHC.throw, 'throw)
     , ('GHC.patError, 'patError')
     , ('GHC.withSomeSNat, 'withSomeSNat)
+    , ('GHC.map, 'map)
+    , ('GHC.zip, 'zip)
     ]
   }
 
@@ -1027,11 +1031,11 @@ not# x = do
   let x' = Pantomime.project x
   Pantomime.embed $ Pantomime.bvnot @Pantomime.PlatformWordSize x'
 
--- FIXME: This behaviour is not great: it is UB when the idx is out of bounds
--- but we now give it a specific semantic. Ideally, we would have something like
--- "forall UB that a shift can produce". This would probably amount to an
--- uninterpreted function for the shift. I don't have a way of conjuring this
--- at the moment, so I'll leave it as is for now!
+-- FIXME: This behaviour is not great: in Haskell, it is UB when the idx is
+-- out of bounds but we now give it a specific semantic. Ideally, we would have
+-- something like "forall UB that a shift can produce". This would probably
+-- amount to an uninterpreted function for the shift. I don't have a way of
+-- conjuring this at the moment, so I'll leave it as is for now!
 uncheckedShiftRL#
   :: Pantomime.Embeddable BitVecPW Word#
   => Pantomime.Embeddable BitVecPW Int#
@@ -1466,6 +1470,10 @@ noinline = id
 undefined :: a
 undefined = GHC.raise# ()
 
+-- FIXME: This is not actually the implementation for 'throw'.
+throw :: forall rep (a :: TYPE rep) e. e -> a
+throw = GHC.raise# ()
+
 -- FIXME: This is not actually the implementation for 'patError'.
 patError' :: forall q (a :: TYPE q). Addr# -> a
 patError' _ = GHC.raise# ()
@@ -1476,3 +1484,15 @@ withSomeSNat
   -> (forall n. SNat n -> r)
   -> r
 withSomeSNat n f = f $ unsafeSNat n
+
+map :: (a -> b) -> [a] -> [b]
+map f = do
+  let go = \case
+        [] -> []
+        x : xs -> f x : go xs
+  go
+
+zip :: [a] -> [b] -> [(a, b)]
+zip = \cases
+  (x : xs) (y : ys) -> (x, y) : zip xs ys
+  _ _ -> []
