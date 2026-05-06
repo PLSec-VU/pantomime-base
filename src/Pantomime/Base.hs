@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE PolyKinds #-}
@@ -30,22 +31,30 @@ import GHC.Base qualified as GHC
 import GHC.Exts (IsList (..))
 import GHC.Num (Integer(..), Natural (..))
 import GHC.Num qualified as GHC
-  ( integerFromNatural
+  ( integerFromBigNat#
+  , integerFromBigNatNeg#
+  , integerFromNatural
   , integerFromWord#
+  , integerSub
   , integerToInt#
+  , integerToNatural
   , integerToWord#
   , naturalAdd
   , naturalSubThrow
   , naturalFromBigNat#
+  , naturalFromWord#
   )
+import GHC.Num.Primitives qualified as GHC (wordFromAbsInt#)
 import GHC.Num.BigNat qualified as GHC
   ( bigNatFromWord#
   , bigNatToWord#
   , bigNatAddWord#
   , bigNatAdd
+  , bigNatCompare
   , bigNatFromWord2#
   , bigNatSubWordUnsafe#
   , bigNatSub
+  , bigNatSubUnsafe
   )
 import GHC.Prim qualified as GHC
 import GHC.Prim.Exception qualified as GHC
@@ -358,7 +367,9 @@ axioms = PluginAxioms
     , ('GHC.integerFromWord#, 'integerFromWord#)
     , ('GHC.integerToWord#, 'integerToWord#)
     , ('GHC.integerFromNatural, 'integerFromNatural)
+    , ('GHC.integerToNatural, 'integerToNatural)
     , ('GHC.integerToInt#, 'integerToInt#)
+    , ('GHC.integerSub, 'integerSub)
     , ('GHC.naturalAdd, 'naturalAdd)
     , ('GHC.naturalSubThrow, 'naturalSubThrow)
     , ('GHC.noinline, 'noinline)
@@ -1421,10 +1432,19 @@ i2hsi x = do
 
 -- TODO: The below definitions exists solely because the unfolding doesn't
 -- exist. There should be a way around this...
+--
+-- The main problem is that GHC comes with its own version of 'base' and it
+-- thus cannot be compiled with -fexpose-all-unfoldings.
 
 integerFromNatural :: Natural -> Integer
 integerFromNatural (NS x) = GHC.integerFromWord# x
 integerFromNatural (NB x) = IP x
+
+integerToNatural :: Integer -> Natural
+integerToNatural = \case
+  IS x -> GHC.naturalFromWord# (GHC.wordFromAbsInt# x)
+  IP x -> GHC.naturalFromBigNat# x
+  IN x -> GHC.naturalFromBigNat# x
 
 integerFromWord# :: Word# -> Integer
 integerFromWord# w = if
@@ -1444,6 +1464,50 @@ integerToWord# = \case
   IP bn -> GHC.bigNatToWord# bn
   IN bn -> GHC.int2Word# $ GHC.negateInt# $ GHC.word2Int# $ GHC.bigNatToWord# bn
 
+integerSub :: Integer -> Integer -> Integer
+integerSub !x      (IS 0#) = x     -- Note [Bangs in Integer functions]
+integerSub (IS x#) (IS y#)
+  = case GHC.subIntC# x# y# of
+    (# z#, 0# #) -> IS z#
+    (# 0#, _  #) -> IN (GHC.bigNatFromWord2# 1## 0##)
+    (# z#, _  #)
+      | GHC.isTrue# (z# GHC.># 0#)
+      -> IN (GHC.bigNatFromWord# (GHC.int2Word# (GHC.negateInt# z#)))
+      | True
+      -> IP (GHC.bigNatFromWord# (GHC.int2Word# z#))
+integerSub (IS x#) (IP y)
+  | GHC.isTrue# (x# GHC.>=# 0#)
+  = GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# x#))
+  | otherwise
+  = IN (GHC.bigNatAddWord# y (GHC.int2Word# (GHC.negateInt# x#)))
+integerSub (IS x#) (IN y)
+  | GHC.isTrue# (x# GHC.>=# 0#)
+  = IP (GHC.bigNatAddWord# y (GHC.int2Word# x#))
+  | otherwise
+  = GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# (GHC.negateInt# x#)))
+integerSub (IP x) (IP y)
+  = case GHC.bigNatCompare x y of
+    LT -> GHC.integerFromBigNatNeg# (GHC.bigNatSubUnsafe y x)
+    EQ -> IS 0#
+    GT -> GHC.integerFromBigNat# (GHC.bigNatSubUnsafe x y)
+integerSub (IP x) (IN y) = IP (GHC.bigNatAdd x y)
+integerSub (IN x) (IP y) = IN (GHC.bigNatAdd x y)
+integerSub (IN x) (IN y)
+  = case GHC.bigNatCompare x y of
+    LT -> GHC.integerFromBigNat# (GHC.bigNatSubUnsafe y x)
+    EQ -> IS 0#
+    GT -> GHC.integerFromBigNatNeg# (GHC.bigNatSubUnsafe x y)
+integerSub (IP x) (IS y#)
+  | GHC.isTrue# (y# GHC.>=# 0#)
+  = GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# y#))
+  | otherwise
+  = IP (GHC.bigNatAddWord# x (GHC.int2Word# (GHC.negateInt# y#)))
+integerSub (IN x) (IS y#)
+  | GHC.isTrue# (y# GHC.>=# 0#)
+  = IN (GHC.bigNatAddWord# x (GHC.int2Word# y#))
+  | otherwise
+  = GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# (GHC.negateInt# y#)))
+
 naturalAdd :: Natural -> Natural -> Natural
 naturalAdd = \cases
   (NS x) (NB y) -> NB $ GHC.bigNatAddWord# y x
@@ -1457,8 +1521,8 @@ naturalSubThrow :: Natural -> Natural -> Natural
 naturalSubThrow (NS _) (NB _) = GHC.raiseUnderflow
 naturalSubThrow (NB x) (NS y) = GHC.naturalFromBigNat# $ GHC.bigNatSubWordUnsafe# x y
 naturalSubThrow (NS x) (NS y) = case GHC.subWordC# x y of
-  (# l,0# #) -> NS l
-  (# _,_  #) -> GHC.raiseUnderflow
+  (# l, 0# #) -> NS l
+  (# _, _  #) -> GHC.raiseUnderflow
 naturalSubThrow (NB x) (NB y) = case GHC.bigNatSub x y of
   (# (# #) |   #) -> GHC.raiseUnderflow
   (#       | z #) -> GHC.naturalFromBigNat# z

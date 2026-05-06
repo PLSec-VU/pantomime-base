@@ -49,6 +49,7 @@ dependencies:
 - base >= 4.7 && < 5
 - composition
 - constraints
+- ghc-bignum
 - ghc-prim
 - pantomime
 
