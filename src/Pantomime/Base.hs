@@ -62,7 +62,7 @@ import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
-import Prelude hiding (undefined, map, zip)
+import Prelude hiding (undefined, map, zip, fromInteger, toInteger)
 import Unsafe.Coerce (unsafeCoerce)
 
 axioms :: PluginAxioms
@@ -92,6 +92,16 @@ axioms = PluginAxioms
     , ('Pantomime.toWord16#, 'fromBV)
     , ('Pantomime.toWord32#, 'fromBV)
     , ('Pantomime.toWord64#, 'fromBV)
+    , ('Pantomime.fromInt#, 'toBV)
+    , ('Pantomime.fromInt8#, 'toBV)
+    , ('Pantomime.fromInt16#, 'toBV)
+    , ('Pantomime.fromInt32#, 'toBV)
+    , ('Pantomime.fromInt64#, 'toBV)
+    , ('Pantomime.fromWord#, 'toBV)
+    , ('Pantomime.fromWord8#, 'toBV)
+    , ('Pantomime.fromWord16#, 'toBV)
+    , ('Pantomime.fromWord32#, 'toBV)
+    , ('Pantomime.fromWord64#, 'toBV)
     , ('Pantomime.eqInt#, 'eqI)
     , ('Pantomime.eqInt8#, 'eqI8)
     , ('Pantomime.eqInt16#, 'eqI16)
@@ -105,8 +115,8 @@ axioms = PluginAxioms
 
     -- Integer to pantomime primitive conversions.
     ----------------------------------------------
-    , ('Pantomime.hsi2i, 'hsi2i)
-    , ('Pantomime.i2hsi, 'i2hsi)
+    , ('Pantomime.fromInteger, 'fromInteger)
+    , ('Pantomime.toInteger, 'toInteger)
 
     -- System FC primitive operations.
     ----------------------------------
@@ -399,6 +409,13 @@ fromBV
   -> a
 fromBV = Pantomime.embed
 
+toBV
+  :: forall r n (a :: TYPE r)
+   . Pantomime.Embeddable (Pantomime.BitVec n) a
+  => a
+  -> Pantomime.BitVec n
+toBV = Pantomime.project
+
 -- NOTE: Sadly, we cannot create one instance for the 'eq' functions
 -- as Haskell does not allow us to be polymorphic over the runtime
 -- representation. Probably we can once we adjust the definition of 'Embeddable'
@@ -417,51 +434,43 @@ fromBV = Pantomime.embed
 --
 -- As in this case, we do not need to bind the variables.
 
-eqI :: Pantomime.Embeddable BitVec64 Int# => Int# -> Int# -> Pantomime.Bool
-eqI lhs rhs = Pantomime.bveq @64 (Pantomime.project lhs) (Pantomime.project rhs)
+eqI :: Int# -> Int# -> Pantomime.Bool
+eqI lhs rhs = Pantomime.bveq (Pantomime.fromInt# lhs) (Pantomime.fromInt# rhs)
 
-eqI8 :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Pantomime.Bool
-eqI8 lhs rhs = Pantomime.bveq @8 (Pantomime.project lhs) (Pantomime.project rhs)
+eqI8 :: Int8# -> Int8# -> Pantomime.Bool
+eqI8 lhs rhs = Pantomime.bveq (Pantomime.fromInt8# lhs) (Pantomime.fromInt8# rhs)
 
-eqI16 :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Pantomime.Bool
-eqI16 lhs rhs = Pantomime.bveq @16 (Pantomime.project lhs) (Pantomime.project rhs)
+eqI16 :: Int16# -> Int16# -> Pantomime.Bool
+eqI16 lhs rhs = Pantomime.bveq (Pantomime.fromInt16# lhs) (Pantomime.fromInt16# rhs)
 
-eqI32 :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Pantomime.Bool
-eqI32 lhs rhs = Pantomime.bveq @32 (Pantomime.project lhs) (Pantomime.project rhs)
+eqI32 :: Int32# -> Int32# -> Pantomime.Bool
+eqI32 lhs rhs = Pantomime.bveq (Pantomime.fromInt32# lhs) (Pantomime.fromInt32# rhs)
 
-eqI64 :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Pantomime.Bool
-eqI64 lhs rhs = Pantomime.bveq @64 (Pantomime.project lhs) (Pantomime.project rhs)
+eqI64 :: Int64# -> Int64# -> Pantomime.Bool
+eqI64 lhs rhs = Pantomime.bveq (Pantomime.fromInt64# lhs) (Pantomime.fromInt64# rhs)
 
-eqW :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Pantomime.Bool
-eqW lhs rhs = Pantomime.bveq @64 (Pantomime.project lhs) (Pantomime.project rhs)
+eqW :: Word# -> Word# -> Pantomime.Bool
+eqW lhs rhs = Pantomime.bveq (Pantomime.fromWord# lhs) (Pantomime.fromWord# rhs)
 
-eqW8 :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Pantomime.Bool
-eqW8 lhs rhs = Pantomime.bveq @8 (Pantomime.project lhs) (Pantomime.project rhs)
+eqW8 :: Word8# -> Word8# -> Pantomime.Bool
+eqW8 lhs rhs = Pantomime.bveq (Pantomime.fromWord8# lhs) (Pantomime.fromWord8# rhs)
 
-eqW16 :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Pantomime.Bool
-eqW16 lhs rhs = Pantomime.bveq @16 (Pantomime.project lhs) (Pantomime.project rhs)
+eqW16 :: Word16# -> Word16# -> Pantomime.Bool
+eqW16 lhs rhs = Pantomime.bveq (Pantomime.fromWord16# lhs) (Pantomime.fromWord16# rhs)
 
-eqW32 :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Pantomime.Bool
-eqW32 lhs rhs = Pantomime.bveq @32 (Pantomime.project lhs) (Pantomime.project rhs)
+eqW32 :: Word32# -> Word32# -> Pantomime.Bool
+eqW32 lhs rhs = Pantomime.bveq (Pantomime.fromWord32# lhs) (Pantomime.fromWord32# rhs)
 
-eqW64 :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Pantomime.Bool
-eqW64 lhs rhs = Pantomime.bveq @64 (Pantomime.project lhs) (Pantomime.project rhs)
+eqW64 :: Word64# -> Word64# -> Pantomime.Bool
+eqW64 lhs rhs = Pantomime.bveq (Pantomime.fromWord64# lhs) (Pantomime.fromWord64# rhs)
 
 bool2I# :: Pantomime.Bool -> Int#
 bool2I# scrut = Pantomime.iteIP scrut 1# 0#
 
-tagToEnum
-  :: forall a
-   . Pantomime.Embeddable BitVecPW Int#
-  => Int#
-  -> a
-tagToEnum i = Pantomime.tagToEnum $ Pantomime.project i
+tagToEnum :: Int# -> a
+tagToEnum i = Pantomime.tagToEnum $ Pantomime.fromInt# i
 
-dataToTag
-  :: forall l (a :: TYPE (BoxedRep l))
-   . Pantomime.Embeddable BitVecPW Int#
-  => a
-  -> Int#
+dataToTag :: forall l (a :: TYPE (BoxedRep l)). a -> Int#
 -- SAFETY: We need some 'unsafeCoerce' magic because we cannot bind a type
 -- without a fixed runtime representation. The symbolic evaluator doesn't care
 -- at all about 'RuntimeRep' and so we can just fake it to be 'Lifted'.
@@ -470,954 +479,751 @@ dataToTag
 dataToTag = unsafeCoerce @(forall b. b -> Int#) @(forall b. b -> Int#) go
   where
     go :: forall b. b -> Int#
-    go x = Pantomime.embed @_ @_ @BitVecPW $ Pantomime.dataToTag x
+    go x = Pantomime.toInt# $ Pantomime.dataToTag x
 
-int2Word#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVecPW Word#
-  => Int#
-  -> Word#
-int2Word# x = Pantomime.embed @_ @_ @BitVecPW $ Pantomime.project x
+int2Word# :: Int# -> Word#
+int2Word# x = Pantomime.toWord# $ Pantomime.fromInt# x
 
-intToInt8#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec8 Int8#
-  => Int#
-  -> Int8#
-intToInt8# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @8 @Pantomime.PlatformWordSize x'
+intToInt8# :: Int# -> Int8#
+intToInt8# x = Pantomime.toInt8# $ Pantomime.bvselect @0 $ Pantomime.fromInt# x
 
-intToInt16#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec16 Int16#
-  => Int#
-  -> Int16#
-intToInt16# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @16 @Pantomime.PlatformWordSize x'
+intToInt16# :: Int# -> Int16#
+intToInt16# x = Pantomime.toInt16# $ Pantomime.bvselect @0 $ Pantomime.fromInt# x
 
-intToInt32#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec32 Int32#
-  => Int#
-  -> Int32#
-intToInt32# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @32 @Pantomime.PlatformWordSize x'
+intToInt32# :: Int# -> Int32#
+intToInt32# x = Pantomime.toInt32# $ Pantomime.bvselect @0 $ Pantomime.fromInt# x
 
-intToInt64#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec64 Int64#
-  => Int#
-  -> Int64#
-intToInt64# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvsresize @Pantomime.PlatformWordSize @64 x'
+intToInt64# :: Int# -> Int64#
+intToInt64# x = Pantomime.toInt64# $ Pantomime.bvselect @0 $ Pantomime.fromInt# x
 
 binaryInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => (BitVecPW -> BitVecPW -> BitVecPW)
+  :: (BitVecPW -> BitVecPW -> BitVecPW)
   -> Int#
   -> Int#
   -> Int#
 binaryInt# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromInt# lhs
+  let rhs' = Pantomime.fromInt# rhs
+  Pantomime.toInt# $ f lhs' rhs'
 
-(+#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(+#) :: Int# -> Int# -> Int#
 (+#) = binaryInt# (+)
 
-(-#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(-#) :: Int# -> Int# -> Int#
 (-#) = binaryInt# (-)
 
-(*#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(*#) :: Int# -> Int# -> Int#
 (*#) = binaryInt# (*)
 
 binaryIntC#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
+  :: (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
   -> Int#
   -> Int#
   -> (# Int#, Int# #)
 binaryIntC# f lhs rhs = do
   let project' x
         = Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1)
-        $ Pantomime.project @_ @_ @BitVecPW @Int# x
+        $ Pantomime.fromInt# x
   let lhs' = project' lhs
   let rhs' = project' rhs
 
   let result = f lhs' rhs'
-  let add = Pantomime.bvselect @0 @Pantomime.PlatformWordSize result
+  let add = Pantomime.bvselect @0 result
   let carry = Pantomime.bvselect @Pantomime.PlatformWordSize @1 result
-  let carry' = Pantomime.bvzext @_ @Pantomime.PlatformWordSize carry
-  (# Pantomime.embed add, Pantomime.embed carry' #)
+  let carry' = Pantomime.bvzext carry
+  (# Pantomime.toInt# add, Pantomime.toInt# carry' #)
 
-addIntC#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Int#
-  -> Int#
-  -> (# Int#, Int# #)
+addIntC# :: Int# -> Int# -> (# Int#, Int# #)
 addIntC# = binaryIntC# Pantomime.bvadd
 
-subIntC#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Int#
-  -> Int#
-  -> (# Int#, Int# #)
+subIntC# :: Int# -> Int# -> (# Int#, Int# #)
 subIntC# = binaryIntC# \lhs rhs -> Pantomime.bvadd lhs (Pantomime.bvneg rhs)
 
-andI# :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+andI# :: Int# -> Int# -> Int#
 andI# = binaryInt# Pantomime.bvand
 
-orI# :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+orI# :: Int# -> Int# -> Int#
 orI# = binaryInt# Pantomime.bvor
 
-xorI# :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+xorI# :: Int# -> Int# -> Int#
 xorI# = binaryInt# Pantomime.bvxor
 
 unaryInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => (BitVecPW -> BitVecPW)
+  :: (BitVecPW -> BitVecPW)
   -> Int#
   -> Int#
 unaryInt# f x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ f x'
+  let x' = Pantomime.fromInt# x
+  Pantomime.toInt# $ f x'
 
-notI# :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int#
+notI# :: Int# -> Int#
 notI# = unaryInt# Pantomime.bvnot
 
-negateInt# :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int#
+negateInt# :: Int# -> Int#
 negateInt# = unaryInt# Pantomime.bvneg
 
 compareInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => (BitVecPW -> BitVecPW -> Pantomime.Bool)
+  :: (BitVecPW -> BitVecPW -> Pantomime.Bool)
   -> Int#
   -> Int#
   -> Int#
 compareInt# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromInt# lhs
+  let rhs' = Pantomime.fromInt# rhs
   bool2I# $ f lhs' rhs'
 
-(==#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(==#) :: Int# -> Int# -> Int#
 (==#) = compareInt# Pantomime.bveq
 
-(/=#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(/=#) :: Int# -> Int# -> Int#
 (/=#) = compareInt# Pantomime.bvneq
 
-(>=#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(>=#) :: Int# -> Int# -> Int#
 (>=#) = compareInt# $ flip Pantomime.bvsle
 
-(>#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(>#) :: Int# -> Int# -> Int#
 (>#) = compareInt# $ flip Pantomime.bvslt
 
-(<=#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(<=#) :: Int# -> Int# -> Int#
 (<=#) = compareInt# Pantomime.bvsle
 
-(<#) :: Pantomime.Embeddable BitVecPW Int# => Int# -> Int# -> Int#
+(<#) :: Int# -> Int# -> Int#
 (<#) = compareInt# Pantomime.bvslt
 
-int8ToInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec8 Int8#
-  => Int8#
-  -> Int#
-int8ToInt# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvsext @8 @Pantomime.PlatformWordSize x'
+int8ToInt# :: Int8# -> Int#
+int8ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt8# x
 
-int8ToWord8#
-  :: Pantomime.Embeddable BitVec8 Int8#
-  => Pantomime.Embeddable BitVec8 Word8#
-  => Int8#
-  -> Word8#
-int8ToWord8# x = Pantomime.embed @_ @_ @BitVec8 $ Pantomime.project x
+int8ToWord8# :: Int8# -> Word8#
+int8ToWord8# x = Pantomime.toWord8# $ Pantomime.fromInt8# x
 
 binaryInt8#
-  :: Pantomime.Embeddable BitVec8 Int8#
-  => (BitVec8 -> BitVec8 -> BitVec8)
+  :: (BitVec8 -> BitVec8 -> BitVec8)
   -> Int8#
   -> Int8#
   -> Int8#
 binaryInt8# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromInt8# lhs
+  let rhs' = Pantomime.fromInt8# rhs
+  Pantomime.toInt8# $ f lhs' rhs'
 
-plusInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int8#
+plusInt8# :: Int8# -> Int8# -> Int8#
 plusInt8# = binaryInt8# (+)
 
-subInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int8#
+subInt8# :: Int8# -> Int8# -> Int8#
 subInt8# = binaryInt8# (-)
 
-timesInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int8#
+timesInt8# :: Int8# -> Int8# -> Int8#
 timesInt8# = binaryInt8# (*)
 
 unaryInt8#
-  :: Pantomime.Embeddable BitVec8 Int8#
-  => (BitVec8 -> BitVec8)
+  :: (BitVec8 -> BitVec8)
   -> Int8#
   -> Int8#
 unaryInt8# f x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ f x'
+  let x' = Pantomime.fromInt8# x
+  Pantomime.toInt8# $ f x'
 
-negateInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8#
+negateInt8# :: Int8# -> Int8#
 negateInt8# = unaryInt8# negate
 
 compareInt8#
-  :: Pantomime.Embeddable BitVec8 Int8#
-  => (BitVec8 -> BitVec8 -> Pantomime.Bool)
+  :: (BitVec8 -> BitVec8 -> Pantomime.Bool)
   -> Int8#
   -> Int8#
   -> Int#
 compareInt8# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromInt8# lhs
+  let rhs' = Pantomime.fromInt8# rhs
   bool2I# $ f lhs' rhs'
 
-eqInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+eqInt8# :: Int8# -> Int8# -> Int#
 eqInt8# = compareInt8# Pantomime.bveq
 
-neInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+neInt8# :: Int8# -> Int8# -> Int#
 neInt8# = compareInt8# Pantomime.bvneq
 
-geInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+geInt8# :: Int8# -> Int8# -> Int#
 geInt8# = compareInt8# $ flip Pantomime.bvsle
 
-gtInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+gtInt8# :: Int8# -> Int8# -> Int#
 gtInt8# = compareInt8# $ flip Pantomime.bvslt
 
-leInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+leInt8# :: Int8# -> Int8# -> Int#
 leInt8# = compareInt8# Pantomime.bvsle
 
-ltInt8# :: Pantomime.Embeddable BitVec8 Int8# => Int8# -> Int8# -> Int#
+ltInt8# :: Int8# -> Int8# -> Int#
 ltInt8# = compareInt8# Pantomime.bvslt
 
-int16ToInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec16 Int16#
-  => Int16#
-  -> Int#
-int16ToInt# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvsext @16 @Pantomime.PlatformWordSize x'
+int16ToInt# :: Int16# -> Int#
+int16ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt16# x
 
-int16ToWord16#
-  :: Pantomime.Embeddable BitVec16 Int16#
-  => Pantomime.Embeddable BitVec16 Word16#
-  => Int16#
-  -> Word16#
-int16ToWord16# x = Pantomime.embed @_ @_ @BitVec16 $ Pantomime.project x
+int16ToWord16# :: Int16# -> Word16#
+int16ToWord16# x = Pantomime.toWord16# $ Pantomime.fromInt16# x
 
 binaryInt16#
-  :: Pantomime.Embeddable BitVec16 Int16#
-  => (BitVec16 -> BitVec16 -> BitVec16)
+  :: (BitVec16 -> BitVec16 -> BitVec16)
   -> Int16#
   -> Int16#
   -> Int16#
 binaryInt16# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromInt16# lhs
+  let rhs' = Pantomime.fromInt16# rhs
+  Pantomime.toInt16# $ f lhs' rhs'
 
-plusInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int16#
+plusInt16# :: Int16# -> Int16# -> Int16#
 plusInt16# = binaryInt16# (+)
 
-subInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int16#
+subInt16# :: Int16# -> Int16# -> Int16#
 subInt16# = binaryInt16# (-)
 
-timesInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int16#
+timesInt16# :: Int16# -> Int16# -> Int16#
 timesInt16# = binaryInt16# (*)
 
 unaryInt16#
-  :: Pantomime.Embeddable BitVec16 Int16#
-  => (BitVec16 -> BitVec16)
+  :: (BitVec16 -> BitVec16)
   -> Int16#
   -> Int16#
 unaryInt16# f x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ f x'
+  let x' = Pantomime.fromInt16# x
+  Pantomime.toInt16# $ f x'
 
-negateInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16#
+negateInt16# :: Int16# -> Int16#
 negateInt16# = unaryInt16# negate
 
 compareInt16#
-  :: Pantomime.Embeddable BitVec16 Int16#
-  => (BitVec16 -> BitVec16 -> Pantomime.Bool)
+  :: (BitVec16 -> BitVec16 -> Pantomime.Bool)
   -> Int16#
   -> Int16#
   -> Int#
 compareInt16# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromInt16# lhs
+  let rhs' = Pantomime.fromInt16# rhs
   bool2I# $ f lhs' rhs'
 
-eqInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+eqInt16# :: Int16# -> Int16# -> Int#
 eqInt16# = compareInt16# Pantomime.bveq
 
-neInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+neInt16# :: Int16# -> Int16# -> Int#
 neInt16# = compareInt16# Pantomime.bvneq
 
-geInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+geInt16# :: Int16# -> Int16# -> Int#
 geInt16# = compareInt16# $ flip Pantomime.bvsle
 
-gtInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+gtInt16# :: Int16# -> Int16# -> Int#
 gtInt16# = compareInt16# $ flip Pantomime.bvslt
 
-leInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+leInt16# :: Int16# -> Int16# -> Int#
 leInt16# = compareInt16# Pantomime.bvsle
 
-ltInt16# :: Pantomime.Embeddable BitVec16 Int16# => Int16# -> Int16# -> Int#
+ltInt16# :: Int16# -> Int16# -> Int#
 ltInt16# = compareInt16# Pantomime.bvslt
 
-int32ToInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec32 Int32#
-  => Int32#
-  -> Int#
-int32ToInt# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvsext @32 @Pantomime.PlatformWordSize x'
+int32ToInt# :: Int32# -> Int#
+int32ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt32# x
 
-int32ToWord32#
-  :: Pantomime.Embeddable BitVec32 Int32#
-  => Pantomime.Embeddable BitVec32 Word32#
-  => Int32#
-  -> Word32#
-int32ToWord32# x = Pantomime.embed @_ @_ @BitVec32 $ Pantomime.project x
+int32ToWord32# :: Int32# -> Word32#
+int32ToWord32# x = Pantomime.toWord32# $ Pantomime.fromInt32# x
 
 binaryInt32#
-  :: Pantomime.Embeddable BitVec32 Int32#
-  => (BitVec32 -> BitVec32 -> BitVec32)
+  :: (BitVec32 -> BitVec32 -> BitVec32)
   -> Int32#
   -> Int32#
   -> Int32#
 binaryInt32# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromInt32# lhs
+  let rhs' = Pantomime.fromInt32# rhs
+  Pantomime.toInt32# $ f lhs' rhs'
 
-plusInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int32#
+plusInt32# :: Int32# -> Int32# -> Int32#
 plusInt32# = binaryInt32# (+)
 
-subInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int32#
+subInt32# :: Int32# -> Int32# -> Int32#
 subInt32# = binaryInt32# (-)
 
-timesInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int32#
+timesInt32# :: Int32# -> Int32# -> Int32#
 timesInt32# = binaryInt32# (*)
 
 unaryInt32#
-  :: Pantomime.Embeddable BitVec32 Int32#
-  => (BitVec32 -> BitVec32)
+  :: (BitVec32 -> BitVec32)
   -> Int32#
   -> Int32#
 unaryInt32# f x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ f x'
+  let x' = Pantomime.fromInt32# x
+  Pantomime.toInt32# $ f x'
 
-negateInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32#
+negateInt32# :: Int32# -> Int32#
 negateInt32# = unaryInt32# negate
 
 compareInt32#
-  :: Pantomime.Embeddable BitVec32 Int32#
-  => (BitVec32 -> BitVec32 -> Pantomime.Bool)
+  :: (BitVec32 -> BitVec32 -> Pantomime.Bool)
   -> Int32#
   -> Int32#
   -> Int#
 compareInt32# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromInt32# lhs
+  let rhs' = Pantomime.fromInt32# rhs
   bool2I# $ f lhs' rhs'
 
-eqInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+eqInt32# :: Int32# -> Int32# -> Int#
 eqInt32# = compareInt32# Pantomime.bveq
 
-neInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+neInt32# :: Int32# -> Int32# -> Int#
 neInt32# = compareInt32# Pantomime.bvneq
 
-geInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+geInt32# :: Int32# -> Int32# -> Int#
 geInt32# = compareInt32# $ flip Pantomime.bvsle
 
-gtInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+gtInt32# :: Int32# -> Int32# -> Int#
 gtInt32# = compareInt32# $ flip Pantomime.bvslt
 
-leInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+leInt32# :: Int32# -> Int32# -> Int#
 leInt32# = compareInt32# Pantomime.bvsle
 
-ltInt32# :: Pantomime.Embeddable BitVec32 Int32# => Int32# -> Int32# -> Int#
+ltInt32# :: Int32# -> Int32# -> Int#
 ltInt32# = compareInt32# Pantomime.bvslt
 
-int64ToInt#
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Embeddable BitVec64 Int64#
-  => Int64#
-  -> Int#
-int64ToInt# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvsresize @64 @Pantomime.PlatformWordSize x'
+int64ToInt# :: Int64# -> Int#
+int64ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt64# x
 
-int64ToWord64#
-  :: Pantomime.Embeddable BitVec64 Int64#
-  => Pantomime.Embeddable BitVec64 Word64#
-  => Int64#
-  -> Word64#
-int64ToWord64# x = Pantomime.embed @_ @_ @BitVec64 $ Pantomime.project x
+int64ToWord64# :: Int64# -> Word64#
+int64ToWord64# x = Pantomime.toWord64# $ Pantomime.fromInt64# x
 
 binaryInt64#
-  :: Pantomime.Embeddable BitVec64 Int64#
-  => (BitVec64 -> BitVec64 -> BitVec64)
+  :: (BitVec64 -> BitVec64 -> BitVec64)
   -> Int64#
   -> Int64#
   -> Int64#
 binaryInt64# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromInt64# lhs
+  let rhs' = Pantomime.fromInt64# rhs
+  Pantomime.toInt64# $ f lhs' rhs'
 
-plusInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int64#
+plusInt64# :: Int64# -> Int64# -> Int64#
 plusInt64# = binaryInt64# (+)
 
-subInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int64#
+subInt64# :: Int64# -> Int64# -> Int64#
 subInt64# = binaryInt64# (-)
 
-timesInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int64#
+timesInt64# :: Int64# -> Int64# -> Int64#
 timesInt64# = binaryInt64# (*)
 
 unaryInt64#
-  :: Pantomime.Embeddable BitVec64 Int64#
-  => (BitVec64 -> BitVec64)
+  :: (BitVec64 -> BitVec64)
   -> Int64#
   -> Int64#
 unaryInt64# f x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ f x'
+  let x' = Pantomime.fromInt64# x
+  Pantomime.toInt64# $ f x'
 
-negateInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64#
+negateInt64# :: Int64# -> Int64#
 negateInt64# = unaryInt64# negate
 
 compareInt64#
-  :: Pantomime.Embeddable BitVec64 Int64#
-  => (BitVec64 -> BitVec64 -> Pantomime.Bool)
+  :: (BitVec64 -> BitVec64 -> Pantomime.Bool)
   -> Int64#
   -> Int64#
   -> Int#
 compareInt64# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromInt64# lhs
+  let rhs' = Pantomime.fromInt64# rhs
   bool2I# $ f lhs' rhs'
 
-eqInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+eqInt64# :: Int64# -> Int64# -> Int#
 eqInt64# = compareInt64# Pantomime.bveq
 
-neInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+neInt64# :: Int64# -> Int64# -> Int#
 neInt64# = compareInt64# Pantomime.bvneq
 
-geInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+geInt64# :: Int64# -> Int64# -> Int#
 geInt64# = compareInt64# $ flip Pantomime.bvsle
 
-gtInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+gtInt64# :: Int64# -> Int64# -> Int#
 gtInt64# = compareInt64# $ flip Pantomime.bvslt
 
-leInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+leInt64# :: Int64# -> Int64# -> Int#
 leInt64# = compareInt64# Pantomime.bvsle
 
-ltInt64# :: Pantomime.Embeddable BitVec64 Int64# => Int64# -> Int64# -> Int#
+ltInt64# :: Int64# -> Int64# -> Int#
 ltInt64# = compareInt64# Pantomime.bvslt
 
-word2Int#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVecPW Int#
-  => Word#
-  -> Int#
-word2Int# x = Pantomime.embed @_ @_ @BitVecPW $ Pantomime.project x
+word2Int# :: Word# -> Int#
+word2Int# x = Pantomime.toInt# $ Pantomime.fromWord# x
 
-wordToWord8#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec8 Word8#
-  => Word#
-  -> Word8#
-wordToWord8# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @8 @Pantomime.PlatformWordSize x'
+wordToWord8# :: Word# -> Word8#
+wordToWord8# x = Pantomime.toWord8# $ Pantomime.bvselect @0 $ Pantomime.fromWord# x
 
-wordToWord16#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec16 Word16#
-  => Word#
-  -> Word16#
-wordToWord16# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @16 @Pantomime.PlatformWordSize x'
+wordToWord16# :: Word# -> Word16#
+wordToWord16# x = Pantomime.toWord16# $ Pantomime.bvselect @0 $ Pantomime.fromWord# x
 
-wordToWord32#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec32 Word32#
-  => Word#
-  -> Word32#
-wordToWord32# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvselect @0 @32 @Pantomime.PlatformWordSize x'
+wordToWord32# :: Word# -> Word32#
+wordToWord32# x = Pantomime.toWord32# $ Pantomime.bvselect @0 $ Pantomime.fromWord# x
 
-wordToWord64#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec64 Word64#
-  => Word#
-  -> Word64#
-wordToWord64# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvzresize @Pantomime.PlatformWordSize @64 x'
+wordToWord64# :: Word# -> Word64#
+wordToWord64# x = Pantomime.toWord64# $ Pantomime.bvselect @0 $ Pantomime.fromWord# x
 
 binaryWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => (BitVecPW -> BitVecPW -> BitVecPW)
+  :: (BitVecPW -> BitVecPW -> BitVecPW)
   -> Word#
   -> Word#
   -> Word#
 binaryWord# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromWord# lhs
+  let rhs' = Pantomime.fromWord# rhs
+  Pantomime.toWord# $ f lhs' rhs'
 
-plusWord# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+plusWord# :: Word# -> Word# -> Word#
 plusWord# = binaryWord# (+)
 
-minusWord# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+minusWord# :: Word# -> Word# -> Word#
 minusWord# = binaryWord# (-)
 
-timesWord# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+timesWord# :: Word# -> Word# -> Word#
 timesWord# = binaryWord# (*)
 
 binaryWordC#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVecPW Int#
-  => (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
+  :: (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
   -> Word#
   -> Word#
   -> (# Word#, Int# #)
 binaryWordC# f lhs rhs = do
   let project' x
         = Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1)
-        $ Pantomime.project @_ @_ @BitVecPW @Word# x
+        $ Pantomime.fromWord# x
   let lhs' = project' lhs
   let rhs' = project' rhs
 
   let result = f lhs' rhs'
-  let add = Pantomime.bvselect @0 @Pantomime.PlatformWordSize result
+  let add = Pantomime.bvselect @0 result
   let carry = Pantomime.bvselect @Pantomime.PlatformWordSize @1 result
-  let carry' = Pantomime.bvzext @_ @Pantomime.PlatformWordSize carry
-  (# Pantomime.embed add, Pantomime.embed carry' #)
+  let carry' = Pantomime.bvzext carry
+  (# Pantomime.toWord# add, Pantomime.toInt# carry' #)
 
-addWordC#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVecPW Int#
-  => Word#
-  -> Word#
-  -> (# Word#, Int# #)
+addWordC# :: Word# -> Word# -> (# Word#, Int# #)
 addWordC# = binaryWordC# Pantomime.bvadd
 
-subWordC#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVecPW Int#
-  => Word#
-  -> Word#
-  -> (# Word#, Int# #)
+subWordC# :: Word# -> Word# -> (# Word#, Int# #)
 subWordC# = binaryWordC# \lhs rhs -> Pantomime.bvadd lhs (Pantomime.bvneg rhs)
 
-and# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+and# :: Word# -> Word# -> Word#
 and# = binaryWord# Pantomime.bvand
 
-or# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+or# :: Word# -> Word# -> Word#
 or# = binaryWord# Pantomime.bvor
 
-xor# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word# -> Word#
+xor# :: Word# -> Word# -> Word#
 xor# = binaryWord# Pantomime.bvxor
 
-not# :: Pantomime.Embeddable BitVecPW Word# => Word# -> Word#
-not# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvnot @Pantomime.PlatformWordSize x'
+not# :: Word# -> Word#
+not# x = Pantomime.toWord# $ Pantomime.bvnot $ Pantomime.fromWord# x
 
 -- FIXME: This behaviour is not great: in Haskell, it is UB when the idx is
 -- out of bounds but we now give it a specific semantic. Ideally, we would have
 -- something like "forall UB that a shift can produce". This would probably
 -- amount to an uninterpreted function for the shift. I don't have a way of
 -- conjuring this at the moment, so I'll leave it as is for now!
-uncheckedShiftRL#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVecPW Int#
-  => Word#
-  -> Int#
-  -> Word#
+uncheckedShiftRL# :: Word# -> Int# -> Word#
 uncheckedShiftRL# val idx = do
-  let val' = Pantomime.project val
-  let idx' = Pantomime.project idx
-  Pantomime.embed $ Pantomime.bvlshr @Pantomime.PlatformWordSize val' idx'
+  let val' = Pantomime.fromWord# val
+  let idx' = Pantomime.fromInt# idx
+  Pantomime.toWord# $ Pantomime.bvlshr val' idx'
 
 compareWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => (BitVecPW -> BitVecPW -> Pantomime.Bool)
+  :: (BitVecPW -> BitVecPW -> Pantomime.Bool)
   -> Word#
   -> Word#
   -> Int#
 compareWord# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromWord# lhs
+  let rhs' = Pantomime.fromWord# rhs
   bool2I# $ f lhs' rhs'
 
-eqWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+eqWord# :: Word# -> Word# -> Int#
 eqWord# = compareWord# Pantomime.bveq
 
-neWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+neWord# :: Word# -> Word# -> Int#
 neWord# = compareWord# Pantomime.bvneq
 
-geWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+geWord# :: Word# -> Word# -> Int#
 geWord# = compareWord# $ flip Pantomime.bvule
 
-gtWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+gtWord# :: Word# -> Word# -> Int#
 gtWord# = compareWord# $ flip Pantomime.bvult
 
-leWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+leWord# :: Word# -> Word# -> Int#
 leWord# = compareWord# Pantomime.bvule
 
-ltWord# :: Pantomime.Embeddable BitVec64 Word# => Word# -> Word# -> Int#
+ltWord# :: Word# -> Word# -> Int#
 ltWord# = compareWord# Pantomime.bvult
 
-word8ToWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec8 Word8#
-  => Word8#
-  -> Word#
-word8ToWord# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvzext @8 @Pantomime.PlatformWordSize x'
+word8ToWord# :: Word8# -> Word#
+word8ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord8# x
 
-word8ToInt8#
-  :: Pantomime.Embeddable BitVec8 Word8#
-  => Pantomime.Embeddable BitVec8 Int8#
-  => Word8#
-  -> Int8#
-word8ToInt8# x = Pantomime.embed @_ @_ @BitVec8 $ Pantomime.project x
+word8ToInt8# :: Word8# -> Int8#
+word8ToInt8# x = Pantomime.toInt8# $ Pantomime.fromWord8# x
 
 binaryWord8#
-  :: Pantomime.Embeddable BitVec8 Word8#
-  => (BitVec8 -> BitVec8 -> BitVec8)
+  :: (BitVec8 -> BitVec8 -> BitVec8)
   -> Word8#
   -> Word8#
   -> Word8#
 binaryWord8# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromWord8# lhs
+  let rhs' = Pantomime.fromWord8# rhs
+  Pantomime.toWord8# $ f lhs' rhs'
 
-plusWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+plusWord8# :: Word8# -> Word8# -> Word8#
 plusWord8# = binaryWord8# (+)
 
-subWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+subWord8# :: Word8# -> Word8# -> Word8#
 subWord8# = binaryWord8# (-)
 
-timesWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+timesWord8# :: Word8# -> Word8# -> Word8#
 timesWord8# = binaryWord8# (*)
 
-andWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+andWord8# :: Word8# -> Word8# -> Word8#
 andWord8# = binaryWord8# Pantomime.bvand
 
-orWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+orWord8# :: Word8# -> Word8# -> Word8#
 orWord8# = binaryWord8# Pantomime.bvor
 
-xorWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Word8#
+xorWord8# :: Word8# -> Word8# -> Word8#
 xorWord8# = binaryWord8# Pantomime.bvxor
 
-notWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8#
-notWord8# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvnot @8 x'
+notWord8# :: Word8# -> Word8#
+notWord8# x = Pantomime.toWord8# $ Pantomime.bvnot $ Pantomime.fromWord8# x
 
 compareWord8#
-  :: Pantomime.Embeddable BitVec8 Word8#
-  => (BitVec8 -> BitVec8 -> Pantomime.Bool)
+  :: (BitVec8 -> BitVec8 -> Pantomime.Bool)
   -> Word8#
   -> Word8#
   -> Int#
 compareWord8# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromWord8# lhs
+  let rhs' = Pantomime.fromWord8# rhs
   bool2I# $ f lhs' rhs'
 
-eqWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+eqWord8# :: Word8# -> Word8# -> Int#
 eqWord8# = compareWord8# Pantomime.bveq
 
-neWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+neWord8# :: Word8# -> Word8# -> Int#
 neWord8# = compareWord8# Pantomime.bvneq
 
-geWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+geWord8# :: Word8# -> Word8# -> Int#
 geWord8# = compareWord8# $ flip Pantomime.bvule
 
-gtWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+gtWord8# :: Word8# -> Word8# -> Int#
 gtWord8# = compareWord8# $ flip Pantomime.bvult
 
-leWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+leWord8# :: Word8# -> Word8# -> Int#
 leWord8# = compareWord8# Pantomime.bvule
 
-ltWord8# :: Pantomime.Embeddable BitVec8 Word8# => Word8# -> Word8# -> Int#
+ltWord8# :: Word8# -> Word8# -> Int#
 ltWord8# = compareWord8# Pantomime.bvult
 
-word16ToWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec16 Word16#
-  => Word16#
-  -> Word#
-word16ToWord# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvzext @16 @Pantomime.PlatformWordSize x'
+word16ToWord# :: Word16# -> Word#
+word16ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord16# x
 
-word16ToInt16#
-  :: Pantomime.Embeddable BitVec16 Word16#
-  => Pantomime.Embeddable BitVec16 Int16#
-  => Word16#
-  -> Int16#
-word16ToInt16# x = Pantomime.embed @_ @_ @BitVec16 $ Pantomime.project x
+word16ToInt16# :: Word16# -> Int16#
+word16ToInt16# x = Pantomime.toInt16# $ Pantomime.fromWord16# x
 
 binaryWord16#
-  :: Pantomime.Embeddable BitVec16 Word16#
-  => (BitVec16 -> BitVec16 -> BitVec16)
+  :: (BitVec16 -> BitVec16 -> BitVec16)
   -> Word16#
   -> Word16#
   -> Word16#
 binaryWord16# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromWord16# lhs
+  let rhs' = Pantomime.fromWord16# rhs
+  Pantomime.toWord16# $ f lhs' rhs'
 
-plusWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+plusWord16# :: Word16# -> Word16# -> Word16#
 plusWord16# = binaryWord16# (+)
 
-subWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+subWord16# :: Word16# -> Word16# -> Word16#
 subWord16# = binaryWord16# (-)
 
-timesWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+timesWord16# :: Word16# -> Word16# -> Word16#
 timesWord16# = binaryWord16# (*)
 
-andWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+andWord16# :: Word16# -> Word16# -> Word16#
 andWord16# = binaryWord16# Pantomime.bvand
 
-orWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+orWord16# :: Word16# -> Word16# -> Word16#
 orWord16# = binaryWord16# Pantomime.bvor
 
-xorWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Word16#
+xorWord16# :: Word16# -> Word16# -> Word16#
 xorWord16# = binaryWord16# Pantomime.bvxor
 
-notWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16#
-notWord16# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvnot @16 x'
+notWord16# :: Word16# -> Word16#
+notWord16# x = Pantomime.toWord16# $ Pantomime.bvnot $ Pantomime.fromWord16# x
 
 compareWord16#
-  :: Pantomime.Embeddable BitVec16 Word16#
-  => (BitVec16 -> BitVec16 -> Pantomime.Bool)
+  :: (BitVec16 -> BitVec16 -> Pantomime.Bool)
   -> Word16#
   -> Word16#
   -> Int#
 compareWord16# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromWord16# lhs
+  let rhs' = Pantomime.fromWord16# rhs
   bool2I# $ f lhs' rhs'
 
-eqWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+eqWord16# :: Word16# -> Word16# -> Int#
 eqWord16# = compareWord16# Pantomime.bveq
 
-neWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+neWord16# :: Word16# -> Word16# -> Int#
 neWord16# = compareWord16# Pantomime.bvneq
 
-geWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+geWord16# :: Word16# -> Word16# -> Int#
 geWord16# = compareWord16# $ flip Pantomime.bvule
 
-gtWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+gtWord16# :: Word16# -> Word16# -> Int#
 gtWord16# = compareWord16# $ flip Pantomime.bvult
 
-leWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+leWord16# :: Word16# -> Word16# -> Int#
 leWord16# = compareWord16# Pantomime.bvule
 
-ltWord16# :: Pantomime.Embeddable BitVec16 Word16# => Word16# -> Word16# -> Int#
+ltWord16# :: Word16# -> Word16# -> Int#
 ltWord16# = compareWord16# Pantomime.bvult
 
-word32ToWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec32 Word32#
-  => Word32#
-  -> Word#
-word32ToWord# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvzext @32 @Pantomime.PlatformWordSize x'
+word32ToWord# :: Word32# -> Word#
+word32ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord32# x
 
-word32ToInt32#
-  :: Pantomime.Embeddable BitVec32 Word32#
-  => Pantomime.Embeddable BitVec32 Int32#
-  => Word32#
-  -> Int32#
-word32ToInt32# x = Pantomime.embed @_ @_ @BitVec32 $ Pantomime.project x
+word32ToInt32# :: Word32# -> Int32#
+word32ToInt32# x = Pantomime.toInt32# $ Pantomime.fromWord32# x
 
 binaryWord32#
-  :: Pantomime.Embeddable BitVec32 Word32#
-  => (BitVec32 -> BitVec32 -> BitVec32)
+  :: (BitVec32 -> BitVec32 -> BitVec32)
   -> Word32#
   -> Word32#
   -> Word32#
 binaryWord32# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromWord32# lhs
+  let rhs' = Pantomime.fromWord32# rhs
+  Pantomime.toWord32# $ f lhs' rhs'
 
-plusWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+plusWord32# :: Word32# -> Word32# -> Word32#
 plusWord32# = binaryWord32# (+)
 
-subWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+subWord32# :: Word32# -> Word32# -> Word32#
 subWord32# = binaryWord32# (-)
 
-timesWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+timesWord32# :: Word32# -> Word32# -> Word32#
 timesWord32# = binaryWord32# (*)
 
-andWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+andWord32# :: Word32# -> Word32# -> Word32#
 andWord32# = binaryWord32# Pantomime.bvand
 
-orWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+orWord32# :: Word32# -> Word32# -> Word32#
 orWord32# = binaryWord32# Pantomime.bvor
 
-xorWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Word32#
+xorWord32# :: Word32# -> Word32# -> Word32#
 xorWord32# = binaryWord32# Pantomime.bvxor
 
-notWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32#
-notWord32# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvnot @32 x'
+notWord32# :: Word32# -> Word32#
+notWord32# x = Pantomime.toWord32# $ Pantomime.bvnot $ Pantomime.fromWord32# x
 
 compareWord32#
-  :: Pantomime.Embeddable BitVec32 Word32#
-  => (BitVec32 -> BitVec32 -> Pantomime.Bool)
+  :: (BitVec32 -> BitVec32 -> Pantomime.Bool)
   -> Word32#
   -> Word32#
   -> Int#
 compareWord32# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromWord32# lhs
+  let rhs' = Pantomime.fromWord32# rhs
   bool2I# $ f lhs' rhs'
 
-eqWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+eqWord32# :: Word32# -> Word32# -> Int#
 eqWord32# = compareWord32# Pantomime.bveq
 
-neWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+neWord32# :: Word32# -> Word32# -> Int#
 neWord32# = compareWord32# Pantomime.bvneq
 
-geWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+geWord32# :: Word32# -> Word32# -> Int#
 geWord32# = compareWord32# $ flip Pantomime.bvule
 
-gtWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+gtWord32# :: Word32# -> Word32# -> Int#
 gtWord32# = compareWord32# $ flip Pantomime.bvult
 
-leWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+leWord32# :: Word32# -> Word32# -> Int#
 leWord32# = compareWord32# Pantomime.bvule
 
-ltWord32# :: Pantomime.Embeddable BitVec32 Word32# => Word32# -> Word32# -> Int#
+ltWord32# :: Word32# -> Word32# -> Int#
 ltWord32# = compareWord32# Pantomime.bvult
 
-word64ToWord#
-  :: Pantomime.Embeddable BitVecPW Word#
-  => Pantomime.Embeddable BitVec64 Word64#
-  => Word64#
-  -> Word#
-word64ToWord# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvzresize @64 @Pantomime.PlatformWordSize x'
+word64ToWord# :: Word64# -> Word#
+word64ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord64# x
 
-word64ToInt64#
-  :: Pantomime.Embeddable BitVec64 Word64#
-  => Pantomime.Embeddable BitVec64 Int64#
-  => Word64#
-  -> Int64#
-word64ToInt64# x = Pantomime.embed @_ @_ @BitVec64 $ Pantomime.project x
+word64ToInt64# :: Word64# -> Int64#
+word64ToInt64# x = Pantomime.toInt64# $ Pantomime.fromWord64# x
 
 binaryWord64#
-  :: Pantomime.Embeddable BitVec64 Word64#
-  => (BitVec64 -> BitVec64 -> BitVec64)
+  :: (BitVec64 -> BitVec64 -> BitVec64)
   -> Word64#
   -> Word64#
   -> Word64#
 binaryWord64# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
-  Pantomime.embed $ f lhs' rhs'
+  let lhs' = Pantomime.fromWord64# lhs
+  let rhs' = Pantomime.fromWord64# rhs
+  Pantomime.toWord64# $ f lhs' rhs'
 
-plusWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+plusWord64# :: Word64# -> Word64# -> Word64#
 plusWord64# = binaryWord64# (+)
 
-subWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+subWord64# :: Word64# -> Word64# -> Word64#
 subWord64# = binaryWord64# (-)
 
-timesWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+timesWord64# :: Word64# -> Word64# -> Word64#
 timesWord64# = binaryWord64# (*)
 
-and64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+and64# :: Word64# -> Word64# -> Word64#
 and64# = binaryWord64# Pantomime.bvand
 
-or64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+or64# :: Word64# -> Word64# -> Word64#
 or64# = binaryWord64# Pantomime.bvor
 
-xor64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Word64#
+xor64# :: Word64# -> Word64# -> Word64#
 xor64# = binaryWord64# Pantomime.bvxor
 
-not64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64#
-not64# x = do
-  let x' = Pantomime.project x
-  Pantomime.embed $ Pantomime.bvnot @64 x'
+not64# :: Word64# -> Word64#
+not64# x = Pantomime.toWord64# $ Pantomime.bvnot $ Pantomime.fromWord64# x
 
 compareWord64#
-  :: Pantomime.Embeddable BitVec64 Word64#
-  => (BitVec64 -> BitVec64 -> Pantomime.Bool)
+  :: (BitVec64 -> BitVec64 -> Pantomime.Bool)
   -> Word64#
   -> Word64#
   -> Int#
 compareWord64# f lhs rhs = do
-  let lhs' = Pantomime.project lhs
-  let rhs' = Pantomime.project rhs
+  let lhs' = Pantomime.fromWord64# lhs
+  let rhs' = Pantomime.fromWord64# rhs
   bool2I# $ f lhs' rhs'
 
-eqWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+eqWord64# :: Word64# -> Word64# -> Int#
 eqWord64# = compareWord64# Pantomime.bveq
 
-neWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+neWord64# :: Word64# -> Word64# -> Int#
 neWord64# = compareWord64# Pantomime.bvneq
 
-geWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+geWord64# :: Word64# -> Word64# -> Int#
 geWord64# = compareWord64# $ flip Pantomime.bvule
 
-gtWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+gtWord64# :: Word64# -> Word64# -> Int#
 gtWord64# = compareWord64# $ flip Pantomime.bvult
 
-leWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+leWord64# :: Word64# -> Word64# -> Int#
 leWord64# = compareWord64# Pantomime.bvule
 
-ltWord64# :: Pantomime.Embeddable BitVec64 Word64# => Word64# -> Word64# -> Int#
+ltWord64# :: Word64# -> Word64# -> Int#
 ltWord64# = compareWord64# Pantomime.bvult
 
-hsi2i
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Integer
-  -> Pantomime.Integer
-hsi2i = \case
-  IS x -> Pantomime.bv2i @Pantomime.PlatformWordSize $ Pantomime.project x
+fromInteger :: Integer -> Pantomime.Integer
+fromInteger = \case
+  IS x -> Pantomime.bv2i @Pantomime.PlatformWordSize $ Pantomime.fromInt# x
   IP _x -> undefined
   IN _x -> undefined
 
-i2hsi
-  :: Pantomime.Embeddable BitVecPW Int#
-  => Pantomime.Integer
-  -> Integer
-i2hsi x = do
-  let toI (I# i) = Pantomime.bv2i $ Pantomime.project @_ @_ @BitVecPW i
+toInteger :: Pantomime.Integer -> Integer
+toInteger x = do
+  let toI (I# i) = Pantomime.bv2i $ Pantomime.fromInt# i
   let minI = toI minBound
   let maxI = toI maxBound
   if
@@ -1428,7 +1234,7 @@ i2hsi x = do
     | maxI < x -> undefined
     | otherwise -> do
       let x' = Pantomime.i2bv @Pantomime.PlatformWordSize x
-      IS $ Pantomime.embed x'
+      IS $ Pantomime.toInt# x'
 
 -- TODO: The below definitions exists solely because the unfolding doesn't
 -- exist. There should be a way around this...
