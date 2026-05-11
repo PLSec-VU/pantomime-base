@@ -102,16 +102,6 @@ axioms = PluginAxioms
     , ('Pantomime.fromWord16#, 'toBV)
     , ('Pantomime.fromWord32#, 'toBV)
     , ('Pantomime.fromWord64#, 'toBV)
-    , ('Pantomime.eqInt#, 'eqI)
-    , ('Pantomime.eqInt8#, 'eqI8)
-    , ('Pantomime.eqInt16#, 'eqI16)
-    , ('Pantomime.eqInt32#, 'eqI32)
-    , ('Pantomime.eqInt64#, 'eqI64)
-    , ('Pantomime.eqWord#, 'eqW)
-    , ('Pantomime.eqWord8#, 'eqW8)
-    , ('Pantomime.eqWord16#, 'eqW16)
-    , ('Pantomime.eqWord32#, 'eqW32)
-    , ('Pantomime.eqWord64#, 'eqW64)
 
     -- Integer to pantomime primitive conversions.
     ----------------------------------------------
@@ -415,54 +405,6 @@ toBV
   => a
   -> Pantomime.BitVec n
 toBV = Pantomime.project
-
--- NOTE: Sadly, we cannot create one instance for the 'eq' functions
--- as Haskell does not allow us to be polymorphic over the runtime
--- representation. Probably we can once we adjust the definition of 'Embeddable'
--- to be like 'Coercable'.
---
--- eqBV
---   :: forall r n (a :: TYPE r)
---    . Pantomime.Embeddable (Pantomime.BitVec n) a
---   => a
---   -> a
---   -> Pantomime.Bool
--- eqBV lhs rhs = Pantomime.bveq @64 (Pantomime.project lhs) (Pantomime.project rhs)
---
--- Indeed, perhaps it could work if we could write the following:
--- eqBV = Pantomime.embed $ Pantomime.bveq @n
---
--- As in this case, we do not need to bind the variables.
-
-eqI :: Int# -> Int# -> Pantomime.Bool
-eqI lhs rhs = Pantomime.bveq (Pantomime.fromInt# lhs) (Pantomime.fromInt# rhs)
-
-eqI8 :: Int8# -> Int8# -> Pantomime.Bool
-eqI8 lhs rhs = Pantomime.bveq (Pantomime.fromInt8# lhs) (Pantomime.fromInt8# rhs)
-
-eqI16 :: Int16# -> Int16# -> Pantomime.Bool
-eqI16 lhs rhs = Pantomime.bveq (Pantomime.fromInt16# lhs) (Pantomime.fromInt16# rhs)
-
-eqI32 :: Int32# -> Int32# -> Pantomime.Bool
-eqI32 lhs rhs = Pantomime.bveq (Pantomime.fromInt32# lhs) (Pantomime.fromInt32# rhs)
-
-eqI64 :: Int64# -> Int64# -> Pantomime.Bool
-eqI64 lhs rhs = Pantomime.bveq (Pantomime.fromInt64# lhs) (Pantomime.fromInt64# rhs)
-
-eqW :: Word# -> Word# -> Pantomime.Bool
-eqW lhs rhs = Pantomime.bveq (Pantomime.fromWord# lhs) (Pantomime.fromWord# rhs)
-
-eqW8 :: Word8# -> Word8# -> Pantomime.Bool
-eqW8 lhs rhs = Pantomime.bveq (Pantomime.fromWord8# lhs) (Pantomime.fromWord8# rhs)
-
-eqW16 :: Word16# -> Word16# -> Pantomime.Bool
-eqW16 lhs rhs = Pantomime.bveq (Pantomime.fromWord16# lhs) (Pantomime.fromWord16# rhs)
-
-eqW32 :: Word32# -> Word32# -> Pantomime.Bool
-eqW32 lhs rhs = Pantomime.bveq (Pantomime.fromWord32# lhs) (Pantomime.fromWord32# rhs)
-
-eqW64 :: Word64# -> Word64# -> Pantomime.Bool
-eqW64 lhs rhs = Pantomime.bveq (Pantomime.fromWord64# lhs) (Pantomime.fromWord64# rhs)
 
 bool2I# :: Pantomime.Bool -> Int#
 bool2I# scrut = Pantomime.iteIP scrut 1# 0#
