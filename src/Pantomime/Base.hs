@@ -1159,13 +1159,13 @@ ltWord64# = compareWord64# Pantomime.bvult
 
 fromInteger :: Integer -> Pantomime.Integer
 fromInteger = \case
-  IS x -> Pantomime.bv2i @Pantomime.PlatformWordSize $ Pantomime.fromInt# x
+  IS x -> Pantomime.bvs2i @Pantomime.PlatformWordSize $ Pantomime.fromInt# x
   IP _x -> undefined
   IN _x -> undefined
 
 toInteger :: Pantomime.Integer -> Integer
 toInteger x = do
-  let toI (I# i) = Pantomime.bv2i $ Pantomime.fromInt# i
+  let toI (I# i) = Pantomime.bvs2i $ Pantomime.fromInt# i
   let minI = toI minBound
   let maxI = toI maxBound
   if
