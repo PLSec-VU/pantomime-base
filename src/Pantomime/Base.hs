@@ -259,7 +259,7 @@ axioms = PluginAxioms
     , ('GHC.or#, 'or#)
     , ('GHC.xor#, 'xor#)
     , ('GHC.not#, 'not#)
-    -- , ('GHC.uncheckedShiftL#, 'uncheckedShiftL#)
+    , ('GHC.uncheckedShiftL#, 'uncheckedShiftL#)
     , ('GHC.uncheckedShiftRL#, 'uncheckedShiftRL#)
     , ('GHC.eqWord#, 'eqWord#)
     , ('GHC.neWord#, 'neWord#)
@@ -863,6 +863,12 @@ not# x = Pantomime.toWord# $ Pantomime.bvnot $ Pantomime.fromWord# x
 -- something like "forall UB that a shift can produce". This would probably
 -- amount to an uninterpreted function for the shift. I don't have a way of
 -- conjuring this at the moment, so I'll leave it as is for now!
+uncheckedShiftL# :: Word# -> Int# -> Word#
+uncheckedShiftL# val idx = do
+  let val' = Pantomime.fromWord# val
+  let idx' = Pantomime.fromInt# idx
+  Pantomime.toWord# $ Pantomime.bvshl val' idx'
+
 uncheckedShiftRL# :: Word# -> Int# -> Word#
 uncheckedShiftRL# val idx = do
   let val' = Pantomime.fromWord# val
