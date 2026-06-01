@@ -5,7 +5,7 @@ packages:
 
 extra-deps:
 - github: PLSec-VU/pantomime
-  commit: 491638b742ce2d9fc92976ab0e2037ba259e5ae9
+  commit: c8022497edaf4f14408f171dfcdbc1177367102b
 - github: RobinWebbers/grisette
   commit: ae4d837886efb2e7838f89271f343d6fa8130388
 - sbv-13.6
@@ -65,5 +65,17 @@ extra-deps:
 - colour-2.3.7
 - prettyprinter-ansi-terminal-1.1.3
 - safe-0.3.21
+
+- hspec-2.11.10
+- hspec-core-2.11.10
+- hspec-expectations-0.8.4
+- hspec-discover-2.11.10
+- HUnit-1.6.2.0
+- call-stack-0.4.0
+- clock-0.8.4
+- setenv-0.1.1.3
+- quickcheck-io-0.2.0
+- haskell-lexer-1.2.1
+- tf-random-0.5
 
 allow-newer: true
