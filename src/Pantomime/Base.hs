@@ -9,6 +9,8 @@ module Pantomime.Base
   ) where
 
 import Control.Exception.Base qualified as GHC (patError, throw)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Constraint.Unsafe (unsafeSNat)
 import Data.List qualified as GHC (zip)
 import GHC.Base
@@ -27,6 +29,7 @@ import GHC.Base
   , RuntimeRep (..)
   , Int (..)
   )
+import GHC.Word (Word8 (..))
 import GHC.Base qualified as GHC
 import GHC.Exts (IsList (..))
 import GHC.Num (Integer(..), Natural (..))
@@ -78,6 +81,7 @@ axioms = PluginAxioms
     , (''Word16#, ''BitVec16)
     , (''Word32#, ''BitVec32)
     , (''Word64#, ''BitVec64)
+    , (''ByteString, ''ByteStringR)
     ]
   , termAxioms =
     -- Pantomime embed operations.
@@ -379,6 +383,13 @@ axioms = PluginAxioms
     , ('GHC.withSomeSNat, 'withSomeSNat)
     , ('GHC.map, 'map)
     , ('GHC.zip, 'zip)
+
+    -- ByteString operations.
+    ------------------------
+    , ('BS.empty, 'bsEmpty)
+    , ('BS.singleton, 'bsSingleton)
+    , ('BS.index, 'bsIndex)
+    , ('BS.head, 'bsHead)
     ]
   }
 
@@ -391,6 +402,8 @@ type BitVec16 = Pantomime.BitVec 16
 type BitVec32 = Pantomime.BitVec 32
 
 type BitVec64 = Pantomime.BitVec 64
+
+type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
 
 fromBV
   :: forall r n (a :: TYPE r)
@@ -1314,3 +1327,32 @@ zip :: [a] -> [b] -> [(a, b)]
 zip = \cases
   (x : xs) (y : ys) -> (x, y) : zip xs ys
   _ _ -> []
+
+-- =============================================================================
+-- ByteString interpretation functions
+-- =============================================================================
+
+bsEmpty :: ByteString
+bsEmpty =
+  let zero = 0 :: Pantomime.BitVec 8
+  in unsafeCoerce $ Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zero
+
+bsSingleton :: Word8 -> ByteString
+bsSingleton (W8# w#) =
+  let zeroBv = 0 :: Pantomime.BitVec 8
+      zeroIx = 0 :: Pantomime.Integer
+      arr = Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zeroBv
+  in unsafeCoerce $ Pantomime.astore arr zeroIx (Pantomime.fromWord8# w#)
+
+bsIndex :: ByteString -> Int -> Word8
+bsIndex bs (I# i#) =
+  let arr = unsafeCoerce bs :: ByteStringR
+      idx = Pantomime.bvu2i $ Pantomime.fromInt# i#
+      val = Pantomime.aselect arr idx
+  in W8# (Pantomime.toWord8# val)
+
+bsHead :: ByteString -> Word8
+bsHead bs =
+  let arr = unsafeCoerce bs :: ByteStringR
+      val = Pantomime.aselect arr 0
+  in W8# (Pantomime.toWord8# val)

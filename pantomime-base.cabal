@@ -60,6 +60,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , composition
     , constraints
     , ghc-bignum
@@ -69,8 +70,20 @@ library
 
 test-suite pantomime-base-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
+      BoolTest
+      ByteStringTest
+      Common
+      Int
+      Int16
+      Int32
+      Int64
+      Int8
+      IntegerTest
+      Word
+      Word64
+      Word8
       Paths_pantomime_base
   autogen-modules:
       Paths_pantomime_base
@@ -101,9 +114,12 @@ test-suite pantomime-base-test
       TypeApplications
       TypeFamilies
       TypeOperators
+      MagicHash
+      UnboxedTuples
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings -threaded -rtsopts -with-rtsopts=-N -fplugin=Pantomime
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , composition
     , constraints
     , ghc-bignum

@@ -47,6 +47,7 @@ default-extensions:
 
 dependencies:
 - base >= 4.7 && < 5
+- bytestring
 - composition
 - constraints
 - ghc-bignum
@@ -71,16 +72,20 @@ library:
 
 tests:
   pantomime-base-test:
-    main: Spec.hs
+    main: Main.hs
     source-dirs: test
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     - -fplugin=Pantomime
+    default-extensions:
+    - MagicHash
+    - UnboxedTuples
     dependencies:
     - pantomime-base
     - pantomime
+    - bytestring
     - hspec
     - hspec-expectations
     - ghc-prim
