@@ -65,8 +65,10 @@ library
     , composition
     , constraints
     , ghc-bignum
+    , ghc-internal
     , ghc-prim
     , pantomime
+    , template-haskell
   default-language: Haskell2010
 
 test-suite pantomime-base-test
@@ -125,9 +127,11 @@ test-suite pantomime-base-test
     , composition
     , constraints
     , ghc-bignum
+    , ghc-internal
     , ghc-prim
     , hspec
     , hspec-expectations
     , pantomime
     , pantomime-base
+    , template-haskell
   default-language: Haskell2010

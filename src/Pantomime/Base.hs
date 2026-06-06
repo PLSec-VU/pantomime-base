@@ -35,8 +35,11 @@ import GHC.Base
     bindIO,
   )
 import GHC.Base qualified as GHC
+import GHC.Internal.Base qualified as GHC.Internal.Base
 import GHC.IO qualified as GHC.IO
 import GHC.IO.Unsafe qualified as GHC.IO.Unsafe
+import GHC.Internal.IO qualified as GHC.Internal.IO
+import GHC.Internal.IO.Unsafe qualified as GHC.Internal.IO.Unsafe
 import GHC.Exts (IsList (..))
 import System.IO.Unsafe (unsafePerformIO)
 import GHC.Num (Integer (..), Natural (..))
@@ -71,6 +74,7 @@ import GHC.Prim.Exception qualified as GHC
 import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
 import GHC.Word (Word8 (..))
+import Language.Haskell.TH (mkName)
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
 import Unsafe.Coerce (unsafeCoerce)
@@ -380,11 +384,17 @@ axioms =
           ('GHC.throw, 'throw),
           ('GHC.patError, 'patError'),
           ('GHC.withSomeSNat, 'withSomeSNat),
-          ('unsafePerformIO, 'unsafePerformIO_axiom),
-          ('GHC.IO.unsafePerformIO, 'unsafePerformIO_axiom),
-          ('GHC.IO.Unsafe.unsafePerformIO, 'unsafePerformIO_axiom),
-          ('returnIO, 'returnIO_axiom),
-          ('bindIO, 'bindIO_axiom),
+          ('unsafePerformIO, 'unsafePerformIOAxiom),
+          ('GHC.IO.unsafePerformIO, 'unsafePerformIOAxiom),
+          ('GHC.IO.Unsafe.unsafePerformIO, 'unsafePerformIOAxiom),
+          ('GHC.Internal.IO.unsafePerformIO, 'unsafePerformIOAxiom),
+          ('GHC.Internal.IO.Unsafe.unsafePerformIO, 'unsafePerformIOAxiom),
+          ('returnIO, 'returnIOAxiom),
+          ('GHC.Internal.Base.returnIO, 'returnIOAxiom),
+          (mkName "IHaskellPrelude.returnIO", 'returnIOAxiom),
+          ('bindIO, 'bindIOAxiom),
+          ('GHC.Internal.Base.bindIO, 'bindIOAxiom),
+          (mkName "IHaskellPrelude.bindIO", 'bindIOAxiom),
           ('GHC.map, 'map),
           ('GHC.zip, 'zip),
           -- ByteString operations.
@@ -410,7 +420,7 @@ type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
 
 type FakeWorld = Pantomime.Integer
 
-type FakeIO a = FakeWorld -> (FakeWorld, a)
+newtype FakeIO a = FakeIO (FakeWorld -> (FakeWorld, a))
 
 fromBV ::
   forall r n (a :: TYPE r).
@@ -1325,14 +1335,16 @@ withSomeSNat ::
   r
 withSomeSNat n f = f $ unsafeSNat n
 
-unsafePerformIO_axiom :: forall a. FakeIO a -> a
-unsafePerformIO_axiom f = case f 0 of (_, a) -> a
+unsafePerformIOAxiom :: forall a. FakeIO a -> a
+unsafePerformIOAxiom (FakeIO f) = case f 0 of (_, a) -> a
 
-returnIO_axiom :: forall a. a -> FakeIO a
-returnIO_axiom a s = (s, a)
+returnIOAxiom :: forall a. a -> FakeIO a
+returnIOAxiom a = FakeIO $ \s -> (s + 1, a)
 
-bindIO_axiom :: forall a b. FakeIO a -> (a -> FakeIO b) -> FakeIO b
-bindIO_axiom m f s = case m s of (s', a) -> f a s'
+bindIOAxiom :: forall a b. FakeIO a -> (a -> FakeIO b) -> FakeIO b
+bindIOAxiom (FakeIO m) k = FakeIO $ \s -> case m s of
+  (s', a) -> case k a of
+    FakeIO n -> n s'
 
 map :: (a -> b) -> [a] -> [b]
 map f = do

@@ -7,7 +7,7 @@ import GHC.Base (returnIO)
 
 {-# ANN testIO (Theory axioms) #-}
 testIO :: Int -> Pantomime.Bool
-testIO x = Pantomime.boolean (x == unsafePerformIO (return x))
+testIO x = Pantomime.boolean (x == unsafePerformIO (returnIO x))
 
 spec :: Spec
 spec = describe "IO Explanation" $ do

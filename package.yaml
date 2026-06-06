@@ -51,8 +51,10 @@ dependencies:
   - composition
   - constraints
   - ghc-bignum
+  - ghc-internal
   - ghc-prim
   - pantomime
+  - template-haskell
 
 ghc-options:
   - -Wall
