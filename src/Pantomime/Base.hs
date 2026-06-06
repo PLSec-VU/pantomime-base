@@ -5,8 +5,9 @@
 {-# LANGUAGE UnboxedTuples #-}
 
 module Pantomime.Base
-  ( axioms
-  ) where
+  ( axioms,
+  )
+where
 
 import Control.Exception.Base qualified as GHC (patError, throw)
 import Data.ByteString (ByteString)
@@ -14,384 +15,372 @@ import Data.ByteString qualified as BS
 import Data.Constraint.Unsafe (unsafeSNat)
 import Data.List qualified as GHC (zip)
 import GHC.Base
-  ( TYPE
-  , Int#
-  , Int8#
-  , Int16#
-  , Int32#
-  , Int64#
-  , Word#
-  , Word8#
-  , Word16#
-  , Word32#
-  , Word64#
-  , Addr#
-  , RuntimeRep (..)
-  , Int (..)
+  ( Addr#,
+    Int (..),
+    Int#,
+    Int16#,
+    Int32#,
+    Int64#,
+    Int8#,
+    RuntimeRep (..),
+    TYPE,
+    Word#,
+    Word16#,
+    Word32#,
+    Word64#,
+    Word8#,
   )
-import GHC.Word (Word8 (..))
 import GHC.Base qualified as GHC
 import GHC.Exts (IsList (..))
-import GHC.Num (Integer(..), Natural (..))
+import GHC.Num (Integer (..), Natural (..))
 import GHC.Num qualified as GHC
-  ( integerFromBigNat#
-  , integerFromBigNatNeg#
-  , integerFromNatural
-  , integerFromWord#
-  , integerSub
-  , integerToInt#
-  , integerToNatural
-  , integerToWord#
-  , naturalAdd
-  , naturalSubThrow
-  , naturalFromBigNat#
-  , naturalFromWord#
+  ( integerFromBigNat#,
+    integerFromBigNatNeg#,
+    integerFromNatural,
+    integerFromWord#,
+    integerSub,
+    integerToInt#,
+    integerToNatural,
+    integerToWord#,
+    naturalAdd,
+    naturalFromBigNat#,
+    naturalFromWord#,
+    naturalSubThrow,
+  )
+import GHC.Num.BigNat qualified as GHC
+  ( bigNatAdd,
+    bigNatAddWord#,
+    bigNatCompare,
+    bigNatFromWord#,
+    bigNatFromWord2#,
+    bigNatSub,
+    bigNatSubUnsafe,
+    bigNatSubWordUnsafe#,
+    bigNatToWord#,
   )
 import GHC.Num.Primitives qualified as GHC (wordFromAbsInt#)
-import GHC.Num.BigNat qualified as GHC
-  ( bigNatFromWord#
-  , bigNatToWord#
-  , bigNatAddWord#
-  , bigNatAdd
-  , bigNatCompare
-  , bigNatFromWord2#
-  , bigNatSubWordUnsafe#
-  , bigNatSub
-  , bigNatSubUnsafe
-  )
 import GHC.Prim qualified as GHC
 import GHC.Prim.Exception qualified as GHC
 import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
+import GHC.Word (Word8 (..))
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
-import Prelude hiding (undefined, map, zip, fromInteger, toInteger)
 import Unsafe.Coerce (unsafeCoerce)
+import Prelude hiding (fromInteger, map, toInteger, undefined, zip)
 
 axioms :: PluginAxioms
-axioms = PluginAxioms
-  { typeAxioms = fromList
-    [ (''Int#, ''BitVecPW)
-    , (''Int8#, ''BitVec8)
-    , (''Int16#, ''BitVec16)
-    , (''Int32#, ''BitVec32)
-    , (''Int64#, ''BitVec64)
-    , (''Word#, ''BitVecPW)
-    , (''Word8#, ''BitVec8)
-    , (''Word16#, ''BitVec16)
-    , (''Word32#, ''BitVec32)
-    , (''Word64#, ''BitVec64)
-    , (''ByteString, ''ByteStringR)
-    ]
-  , termAxioms =
-    -- Pantomime embed operations.
-    ------------------------------
-    [ ('Pantomime.toInt#, 'fromBV)
-    , ('Pantomime.toInt8#, 'fromBV)
-    , ('Pantomime.toInt16#, 'fromBV)
-    , ('Pantomime.toInt32#, 'fromBV)
-    , ('Pantomime.toInt64#, 'fromBV)
-    , ('Pantomime.toWord#, 'fromBV)
-    , ('Pantomime.toWord8#, 'fromBV)
-    , ('Pantomime.toWord16#, 'fromBV)
-    , ('Pantomime.toWord32#, 'fromBV)
-    , ('Pantomime.toWord64#, 'fromBV)
-    , ('Pantomime.fromInt#, 'toBV)
-    , ('Pantomime.fromInt8#, 'toBV)
-    , ('Pantomime.fromInt16#, 'toBV)
-    , ('Pantomime.fromInt32#, 'toBV)
-    , ('Pantomime.fromInt64#, 'toBV)
-    , ('Pantomime.fromWord#, 'toBV)
-    , ('Pantomime.fromWord8#, 'toBV)
-    , ('Pantomime.fromWord16#, 'toBV)
-    , ('Pantomime.fromWord32#, 'toBV)
-    , ('Pantomime.fromWord64#, 'toBV)
-
-    -- Integer to pantomime primitive conversions.
-    ----------------------------------------------
-    , ('Pantomime.fromInteger, 'fromInteger)
-    , ('Pantomime.toInteger, 'toInteger)
-
-    -- System FC primitive operations.
-    ----------------------------------
-    , ('GHC.tagToEnum#, 'tagToEnum)
-    -- TODO: While these might be deprecated for use, they are in fact required
-    -- in this context... Not sure what to do if these are unexposed (but still
-    -- used internally) in the future.
-    , ('GHC.dataToTagSmall#, 'dataToTag)
-    , ('GHC.dataToTagLarge#, 'dataToTag)
-    , ('GHC.raise#, 'Pantomime.raise)
-
-    -- Int# primitive operations.
-    -----------------------------
-    , ('GHC.intToInt8#, 'intToInt8#)
-    , ('GHC.intToInt16#, 'intToInt16#)
-    , ('GHC.intToInt32#, 'intToInt32#)
-    , ('GHC.intToInt64#, 'intToInt64#)
-    , ('GHC.int2Word#, 'int2Word#)
-    -- , ('GHC.int2Float#, 'undefined)
-    -- , ('GHC.int2Double#, 'undefined)
-    , ('(GHC.+#), '(+#))
-    , ('(GHC.-#), '(-#))
-    , ('(GHC.*#), '(*#))
-    , ('GHC.addIntC#, 'addIntC#)
-    , ('GHC.subIntC#, 'subIntC#)
-    -- , ('GHC.timesInt2#, 'timesInt2#)
-    -- , ('GHC.mulIntMayOflo#, 'mulIntMayOflo#)
-    -- , ('GHC.quotInt#, 'quotInt#)
-    -- , ('GHC.remInt#, 'remInt#)
-    -- , ('GHC.quotRemInt#, 'quotRemInt#)
-    , ('GHC.andI#, 'andI#)
-    , ('GHC.orI#, 'orI#)
-    , ('GHC.xorI#, 'xorI#)
-    , ('GHC.notI#, 'notI#)
-    , ('GHC.negateInt#, 'negateInt#)
-    -- , ('GHC.uncheckedIShiftL#, 'uncheckedIShiftL#)
-    -- , ('GHC.uncheckedIShiftRA#, 'uncheckedIShiftRA#)
-    -- , ('GHC.uncheckedIShiftRL#, 'uncheckedIShiftRL#)
-    , ('(GHC.==#), '(==#))
-    , ('(GHC./=#), '(/=#))
-    , ('(GHC.>=#), '(>=#))
-    , ('(GHC.>#), '(>#))
-    , ('(GHC.<=#), '(<=#))
-    , ('(GHC.<#), '(<#))
-
-    -- Int8# primitive operations.
-    ------------------------------
-    , ('GHC.int8ToInt#, 'int8ToInt#)
-    , ('GHC.int8ToWord8#, 'int8ToWord8#)
-    , ('GHC.plusInt8#, 'plusInt8#)
-    , ('GHC.subInt8#, 'subInt8#)
-    , ('GHC.timesInt8#, 'timesInt8#)
-    -- , ('GHC.quotInt8#, 'quotInt8#)
-    -- , ('GHC.remInt8#, 'remInt8#)
-    -- , ('GHC.quotRemInt8#, 'quotRemInt8#)
-    -- , ('GHC.uncheckedShiftLInt8#, 'uncheckedShiftLInt8#)
-    -- , ('GHC.uncheckedShiftRAInt8#, 'uncheckedShiftRAInt8#)
-    -- , ('GHC.uncheckedShiftRLInt8#, 'uncheckedShiftRLInt8#)
-    , ('GHC.negateInt8#, 'negateInt8#)
-    , ('GHC.eqInt8#, 'eqInt8#)
-    , ('GHC.neInt8#, 'neInt8#)
-    , ('GHC.geInt8#, 'geInt8#)
-    , ('GHC.gtInt8#, 'gtInt8#)
-    , ('GHC.leInt8#, 'leInt8#)
-    , ('GHC.ltInt8#, 'ltInt8#)
-
-    -- Int16# primitive operations.
-    ------------------------------
-    , ('GHC.int16ToInt#, 'int16ToInt#)
-    , ('GHC.int16ToWord16#, 'int16ToWord16#)
-    , ('GHC.plusInt16#, 'plusInt16#)
-    , ('GHC.subInt16#, 'subInt16#)
-    , ('GHC.timesInt16#, 'timesInt16#)
-    -- , ('GHC.quotInt16#, 'quotInt16#)
-    -- , ('GHC.remInt16#, 'remInt16#)
-    -- , ('GHC.quotRemInt16#, 'quotRemInt16#)
-    -- , ('GHC.uncheckedShiftLInt16#, 'uncheckedShiftLInt16#)
-    -- , ('GHC.uncheckedShiftRAInt16#, 'uncheckedShiftRAInt16#)
-    -- , ('GHC.uncheckedShiftRLInt16#, 'uncheckedShiftRLInt16#)
-    , ('GHC.negateInt16#, 'negateInt16#)
-    , ('GHC.eqInt16#, 'eqInt16#)
-    , ('GHC.neInt16#, 'neInt16#)
-    , ('GHC.geInt16#, 'geInt16#)
-    , ('GHC.gtInt16#, 'gtInt16#)
-    , ('GHC.leInt16#, 'leInt16#)
-    , ('GHC.ltInt16#, 'ltInt16#)
-
-    -- Int32# primitive operations.
-    ------------------------------
-    , ('GHC.int32ToInt#, 'int32ToInt#)
-    , ('GHC.int32ToWord32#, 'int32ToWord32#)
-    , ('GHC.plusInt32#, 'plusInt32#)
-    , ('GHC.subInt32#, 'subInt32#)
-    , ('GHC.timesInt32#, 'timesInt32#)
-    -- , ('GHC.quotInt32#, 'quotInt32#)
-    -- , ('GHC.remInt32#, 'remInt32#)
-    -- , ('GHC.quotRemInt32#, 'quotRemInt32#)
-    -- , ('GHC.uncheckedShiftLInt32#, 'uncheckedShiftLInt32#)
-    -- , ('GHC.uncheckedShiftRAInt32#, 'uncheckedShiftRAInt32#)
-    -- , ('GHC.uncheckedShiftRLInt32#, 'uncheckedShiftRLInt32#)
-    , ('GHC.negateInt32#, 'negateInt32#)
-    , ('GHC.eqInt32#, 'eqInt32#)
-    , ('GHC.neInt32#, 'neInt32#)
-    , ('GHC.geInt32#, 'geInt32#)
-    , ('GHC.gtInt32#, 'gtInt32#)
-    , ('GHC.leInt32#, 'leInt32#)
-    , ('GHC.ltInt32#, 'ltInt32#)
-
-    -- Int64# primitive operations.
-    ------------------------------
-    , ('GHC.int64ToInt#, 'int64ToInt#)
-    , ('GHC.int64ToWord64#, 'int64ToWord64#)
-    , ('GHC.plusInt64#, 'plusInt64#)
-    , ('GHC.subInt64#, 'subInt64#)
-    , ('GHC.timesInt64#, 'timesInt64#)
-    -- , ('GHC.quotInt64#, 'quotInt64#)
-    -- , ('GHC.remInt64#, 'remInt64#)
-    -- , ('GHC.uncheckedIShiftL64#, 'uncheckedIShiftL64#)
-    -- , ('GHC.uncheckedIShiftRA64#, 'uncheckedIShiftRA64#)
-    -- , ('GHC.uncheckedIShiftRL64#, 'uncheckedIShiftRL64#)
-    , ('GHC.negateInt64#, 'negateInt64#)
-    , ('GHC.eqInt64#, 'eqInt64#)
-    , ('GHC.neInt64#, 'neInt64#)
-    , ('GHC.geInt64#, 'geInt64#)
-    , ('GHC.gtInt64#, 'gtInt64#)
-    , ('GHC.leInt64#, 'leInt64#)
-    , ('GHC.ltInt64#, 'ltInt64#)
-
-    -- Word# primitive operations.
-    ------------------------------
-    , ('GHC.wordToWord8#, 'wordToWord8#)
-    , ('GHC.wordToWord16#, 'wordToWord16#)
-    , ('GHC.wordToWord32#, 'wordToWord32#)
-    , ('GHC.wordToWord64#, 'wordToWord64#)
-    , ('GHC.word2Int#, 'word2Int#)
-    -- , ('GHC.word2Float#, 'word2Float#)
-    -- , ('GHC.word2Double#, 'word2Double#)
-    , ('GHC.plusWord#, 'plusWord#)
-    , ('GHC.minusWord#, 'minusWord#)
-    , ('GHC.timesWord#, 'timesWord#)
-    , ('GHC.addWordC#, 'addWordC#)
-    , ('GHC.subWordC#, 'subWordC#)
-    -- , ('GHC.plusWord2#, 'plusWord2#)
-    -- , ('GHC.timesWord2#, 'timesWord2#)
-    -- , ('GHC.quotWord#, 'quotWord#)
-    -- , ('GHC.remWord#, 'remWord#)
-    -- , ('GHC.quotRemWord#, 'quotRemWord#)
-    -- , ('GHC.quotRemWord2#, 'quotRemWord2#)
-    , ('GHC.and#, 'and#)
-    , ('GHC.or#, 'or#)
-    , ('GHC.xor#, 'xor#)
-    , ('GHC.not#, 'not#)
-    , ('GHC.uncheckedShiftL#, 'uncheckedShiftL#)
-    , ('GHC.uncheckedShiftRL#, 'uncheckedShiftRL#)
-    , ('GHC.eqWord#, 'eqWord#)
-    , ('GHC.neWord#, 'neWord#)
-    , ('GHC.geWord#, 'geWord#)
-    , ('GHC.gtWord#, 'gtWord#)
-    , ('GHC.leWord#, 'leWord#)
-    , ('GHC.ltWord#, 'ltWord#)
-
-    -- Word8# primitive operations.
-    ------------------------------
-    , ('GHC.word8ToWord#, 'word8ToWord#)
-    , ('GHC.word8ToInt8#, 'word8ToInt8#)
-    , ('GHC.plusWord8#, 'plusWord8#)
-    , ('GHC.subWord8#, 'subWord8#)
-    , ('GHC.timesWord8#, 'timesWord8#)
-    -- , ('GHC.quotWord8#, 'quotWord8#)
-    -- , ('GHC.remWord8#, 'remWord8#)
-    -- , ('GHC.quotRemWord8#, 'quotRemWord8#)
-    , ('GHC.andWord8#, 'andWord8#)
-    , ('GHC.orWord8#, 'orWord8#)
-    , ('GHC.xorWord8#, 'xorWord8#)
-    , ('GHC.notWord8#, 'notWord8#)
-    -- , ('GHC.uncheckedShiftLWord8#, 'uncheckedShiftLWord8#)
-    -- , ('GHC.uncheckedShiftRLWord8#, 'uncheckedShiftRLWord8#)
-    , ('GHC.eqWord8#, 'eqWord8#)
-    , ('GHC.neWord8#, 'neWord8#)
-    , ('GHC.geWord8#, 'geWord8#)
-    , ('GHC.gtWord8#, 'gtWord8#)
-    , ('GHC.leWord8#, 'leWord8#)
-    , ('GHC.ltWord8#, 'ltWord8#)
-
-    -- Word16# primitive operations.
-    ------------------------------
-    , ('GHC.word16ToWord#, 'word16ToWord#)
-    , ('GHC.word16ToInt16#, 'word16ToInt16#)
-    , ('GHC.plusWord16#, 'plusWord16#)
-    , ('GHC.subWord16#, 'subWord16#)
-    , ('GHC.timesWord16#, 'timesWord16#)
-    -- , ('GHC.quotWord16#, 'quotWord16#)
-    -- , ('GHC.remWord16#, 'remWord16#)
-    -- , ('GHC.quotRemWord16#, 'quotRemWord16#)
-    , ('GHC.andWord16#, 'andWord16#)
-    , ('GHC.orWord16#, 'orWord16#)
-    , ('GHC.xorWord16#, 'xorWord16#)
-    , ('GHC.notWord16#, 'notWord16#)
-    -- , ('GHC.uncheckedShiftLWord16#, 'uncheckedShiftLWord16#)
-    -- , ('GHC.uncheckedShiftRLWord16#, 'uncheckedShiftRLWord16#)
-    , ('GHC.eqWord16#, 'eqWord16#)
-    , ('GHC.neWord16#, 'neWord16#)
-    , ('GHC.geWord16#, 'geWord16#)
-    , ('GHC.gtWord16#, 'gtWord16#)
-    , ('GHC.leWord16#, 'leWord16#)
-    , ('GHC.ltWord16#, 'ltWord16#)
-
-    -- Word32# primitive operations.
-    ------------------------------
-    , ('GHC.word32ToWord#, 'word32ToWord#)
-    , ('GHC.word32ToInt32#, 'word32ToInt32#)
-    , ('GHC.plusWord32#, 'plusWord32#)
-    , ('GHC.subWord32#, 'subWord32#)
-    , ('GHC.timesWord32#, 'timesWord32#)
-    -- , ('GHC.quotWord32#, 'quotWord32#)
-    -- , ('GHC.remWord32#, 'remWord32#)
-    -- , ('GHC.quotRemWord32#, 'quotRemWord32#)
-    , ('GHC.andWord32#, 'andWord32#)
-    , ('GHC.orWord32#, 'orWord32#)
-    , ('GHC.xorWord32#, 'xorWord32#)
-    , ('GHC.notWord32#, 'notWord32#)
-    -- , ('GHC.uncheckedShiftLWord32#, 'uncheckedShiftLWord32#)
-    -- , ('GHC.uncheckedShiftRLWord32#, 'uncheckedShiftRLWord32#)
-    , ('GHC.eqWord32#, 'eqWord32#)
-    , ('GHC.neWord32#, 'neWord32#)
-    , ('GHC.geWord32#, 'geWord32#)
-    , ('GHC.gtWord32#, 'gtWord32#)
-    , ('GHC.leWord32#, 'leWord32#)
-    , ('GHC.ltWord32#, 'ltWord32#)
-
-    -- Word64# primitive operations.
-    ------------------------------
-    , ('GHC.word64ToWord#, 'word64ToWord#)
-    , ('GHC.word64ToInt64#, 'word64ToInt64#)
-    , ('GHC.plusWord64#, 'plusWord64#)
-    , ('GHC.subWord64#, 'subWord64#)
-    , ('GHC.timesWord64#, 'timesWord64#)
-    -- , ('GHC.quotWord64#, 'quotWord64#)
-    -- , ('GHC.remWord64#, 'remWord64#)
-    , ('GHC.and64#, 'and64#)
-    , ('GHC.or64#, 'or64#)
-    , ('GHC.xor64#, 'xor64#)
-    , ('GHC.not64#, 'not64#)
-    -- , ('GHC.uncheckedShiftL64#, 'uncheckedShiftL64#)
-    -- , ('GHC.uncheckedShiftRL64#, 'uncheckedShiftRL64#)
-    , ('GHC.eqWord64#, 'eqWord64#)
-    , ('GHC.neWord64#, 'neWord64#)
-    , ('GHC.geWord64#, 'geWord64#)
-    , ('GHC.gtWord64#, 'gtWord64#)
-    , ('GHC.leWord64#, 'leWord64#)
-    , ('GHC.ltWord64#, 'ltWord64#)
-
-    -- Haskell functions without unfoldings.
-    ----------------------------------------
-    -- NOTE: Ideally we would not have these. It's just that GHC tosses
-    -- their unfolding and we cannot get 'base' to be compiled with the flag
-    -- 'expose-all-unfoldings' as 'base' is tied to the compiler...
-    , ('GHC.integerFromWord#, 'integerFromWord#)
-    , ('GHC.integerToWord#, 'integerToWord#)
-    , ('GHC.integerFromNatural, 'integerFromNatural)
-    , ('GHC.integerToNatural, 'integerToNatural)
-    , ('GHC.integerToInt#, 'integerToInt#)
-    , ('GHC.integerSub, 'integerSub)
-    , ('GHC.naturalAdd, 'naturalAdd)
-    , ('GHC.naturalSubThrow, 'naturalSubThrow)
-    , ('GHC.noinline, 'noinline)
-    , ('GHC.undefined, 'undefined)
-    , ('GHC.throw, 'throw)
-    , ('GHC.patError, 'patError')
-    , ('GHC.withSomeSNat, 'withSomeSNat)
-    , ('GHC.map, 'map)
-    , ('GHC.zip, 'zip)
-
-    -- ByteString operations.
-    ------------------------
-    , ('BS.empty, 'bsEmpty)
-    , ('BS.singleton, 'bsSingleton)
-    , ('BS.index, 'bsIndex)
-    , ('BS.head, 'bsHead)
-    ]
-  }
+axioms =
+  PluginAxioms
+    { typeAxioms =
+        fromList
+          [ (''Int#, ''BitVecPW),
+            (''Int8#, ''BitVec8),
+            (''Int16#, ''BitVec16),
+            (''Int32#, ''BitVec32),
+            (''Int64#, ''BitVec64),
+            (''Word#, ''BitVecPW),
+            (''Word8#, ''BitVec8),
+            (''Word16#, ''BitVec16),
+            (''Word32#, ''BitVec32),
+            (''Word64#, ''BitVec64),
+            (''ByteString, ''ByteStringR)
+          ],
+      termAxioms =
+        -- Pantomime embed operations.
+        ------------------------------
+        [ ('Pantomime.toInt#, 'fromBV),
+          ('Pantomime.toInt8#, 'fromBV),
+          ('Pantomime.toInt16#, 'fromBV),
+          ('Pantomime.toInt32#, 'fromBV),
+          ('Pantomime.toInt64#, 'fromBV),
+          ('Pantomime.toWord#, 'fromBV),
+          ('Pantomime.toWord8#, 'fromBV),
+          ('Pantomime.toWord16#, 'fromBV),
+          ('Pantomime.toWord32#, 'fromBV),
+          ('Pantomime.toWord64#, 'fromBV),
+          ('Pantomime.fromInt#, 'toBV),
+          ('Pantomime.fromInt8#, 'toBV),
+          ('Pantomime.fromInt16#, 'toBV),
+          ('Pantomime.fromInt32#, 'toBV),
+          ('Pantomime.fromInt64#, 'toBV),
+          ('Pantomime.fromWord#, 'toBV),
+          ('Pantomime.fromWord8#, 'toBV),
+          ('Pantomime.fromWord16#, 'toBV),
+          ('Pantomime.fromWord32#, 'toBV),
+          ('Pantomime.fromWord64#, 'toBV),
+          -- Integer to pantomime primitive conversions.
+          ----------------------------------------------
+          ('Pantomime.fromInteger, 'fromInteger),
+          ('Pantomime.toInteger, 'toInteger),
+          -- System FC primitive operations.
+          ----------------------------------
+          ('GHC.tagToEnum#, 'tagToEnum),
+          -- TODO: While these might be deprecated for use, they are in fact required
+          -- in this context... Not sure what to do if these are unexposed (but still
+          -- used internally) in the future.
+          ('GHC.dataToTagSmall#, 'dataToTag),
+          ('GHC.dataToTagLarge#, 'dataToTag),
+          ('GHC.raise#, 'Pantomime.raise),
+          -- Int# primitive operations.
+          -----------------------------
+          ('GHC.intToInt8#, 'intToInt8#),
+          ('GHC.intToInt16#, 'intToInt16#),
+          ('GHC.intToInt32#, 'intToInt32#),
+          ('GHC.intToInt64#, 'intToInt64#),
+          ('GHC.int2Word#, 'int2Word#),
+          -- , ('GHC.int2Float#, 'undefined)
+          -- , ('GHC.int2Double#, 'undefined)
+          ('(GHC.+#), '(+#)),
+          ('(GHC.-#), '(-#)),
+          ('(GHC.*#), '(*#)),
+          ('GHC.addIntC#, 'addIntC#),
+          ('GHC.subIntC#, 'subIntC#),
+          -- , ('GHC.timesInt2#, 'timesInt2#)
+          -- , ('GHC.mulIntMayOflo#, 'mulIntMayOflo#)
+          -- , ('GHC.quotInt#, 'quotInt#)
+          -- , ('GHC.remInt#, 'remInt#)
+          -- , ('GHC.quotRemInt#, 'quotRemInt#)
+          ('GHC.andI#, 'andI#),
+          ('GHC.orI#, 'orI#),
+          ('GHC.xorI#, 'xorI#),
+          ('GHC.notI#, 'notI#),
+          ('GHC.negateInt#, 'negateInt#),
+          -- , ('GHC.uncheckedIShiftL#, 'uncheckedIShiftL#)
+          -- , ('GHC.uncheckedIShiftRA#, 'uncheckedIShiftRA#)
+          -- , ('GHC.uncheckedIShiftRL#, 'uncheckedIShiftRL#)
+          ('(GHC.==#), '(==#)),
+          ('(GHC./=#), '(/=#)),
+          ('(GHC.>=#), '(>=#)),
+          ('(GHC.>#), '(>#)),
+          ('(GHC.<=#), '(<=#)),
+          ('(GHC.<#), '(<#)),
+          -- Int8# primitive operations.
+          ------------------------------
+          ('GHC.int8ToInt#, 'int8ToInt#),
+          ('GHC.int8ToWord8#, 'int8ToWord8#),
+          ('GHC.plusInt8#, 'plusInt8#),
+          ('GHC.subInt8#, 'subInt8#),
+          ('GHC.timesInt8#, 'timesInt8#),
+          -- , ('GHC.quotInt8#, 'quotInt8#)
+          -- , ('GHC.remInt8#, 'remInt8#)
+          -- , ('GHC.quotRemInt8#, 'quotRemInt8#)
+          -- , ('GHC.uncheckedShiftLInt8#, 'uncheckedShiftLInt8#)
+          -- , ('GHC.uncheckedShiftRAInt8#, 'uncheckedShiftRAInt8#)
+          -- , ('GHC.uncheckedShiftRLInt8#, 'uncheckedShiftRLInt8#)
+          ('GHC.negateInt8#, 'negateInt8#),
+          ('GHC.eqInt8#, 'eqInt8#),
+          ('GHC.neInt8#, 'neInt8#),
+          ('GHC.geInt8#, 'geInt8#),
+          ('GHC.gtInt8#, 'gtInt8#),
+          ('GHC.leInt8#, 'leInt8#),
+          ('GHC.ltInt8#, 'ltInt8#),
+          -- Int16# primitive operations.
+          ------------------------------
+          ('GHC.int16ToInt#, 'int16ToInt#),
+          ('GHC.int16ToWord16#, 'int16ToWord16#),
+          ('GHC.plusInt16#, 'plusInt16#),
+          ('GHC.subInt16#, 'subInt16#),
+          ('GHC.timesInt16#, 'timesInt16#),
+          -- , ('GHC.quotInt16#, 'quotInt16#)
+          -- , ('GHC.remInt16#, 'remInt16#)
+          -- , ('GHC.quotRemInt16#, 'quotRemInt16#)
+          -- , ('GHC.uncheckedShiftLInt16#, 'uncheckedShiftLInt16#)
+          -- , ('GHC.uncheckedShiftRAInt16#, 'uncheckedShiftRAInt16#)
+          -- , ('GHC.uncheckedShiftRLInt16#, 'uncheckedShiftRLInt16#)
+          ('GHC.negateInt16#, 'negateInt16#),
+          ('GHC.eqInt16#, 'eqInt16#),
+          ('GHC.neInt16#, 'neInt16#),
+          ('GHC.geInt16#, 'geInt16#),
+          ('GHC.gtInt16#, 'gtInt16#),
+          ('GHC.leInt16#, 'leInt16#),
+          ('GHC.ltInt16#, 'ltInt16#),
+          -- Int32# primitive operations.
+          ------------------------------
+          ('GHC.int32ToInt#, 'int32ToInt#),
+          ('GHC.int32ToWord32#, 'int32ToWord32#),
+          ('GHC.plusInt32#, 'plusInt32#),
+          ('GHC.subInt32#, 'subInt32#),
+          ('GHC.timesInt32#, 'timesInt32#),
+          -- , ('GHC.quotInt32#, 'quotInt32#)
+          -- , ('GHC.remInt32#, 'remInt32#)
+          -- , ('GHC.quotRemInt32#, 'quotRemInt32#)
+          -- , ('GHC.uncheckedShiftLInt32#, 'uncheckedShiftLInt32#)
+          -- , ('GHC.uncheckedShiftRAInt32#, 'uncheckedShiftRAInt32#)
+          -- , ('GHC.uncheckedShiftRLInt32#, 'uncheckedShiftRLInt32#)
+          ('GHC.negateInt32#, 'negateInt32#),
+          ('GHC.eqInt32#, 'eqInt32#),
+          ('GHC.neInt32#, 'neInt32#),
+          ('GHC.geInt32#, 'geInt32#),
+          ('GHC.gtInt32#, 'gtInt32#),
+          ('GHC.leInt32#, 'leInt32#),
+          ('GHC.ltInt32#, 'ltInt32#),
+          -- Int64# primitive operations.
+          ------------------------------
+          ('GHC.int64ToInt#, 'int64ToInt#),
+          ('GHC.int64ToWord64#, 'int64ToWord64#),
+          ('GHC.plusInt64#, 'plusInt64#),
+          ('GHC.subInt64#, 'subInt64#),
+          ('GHC.timesInt64#, 'timesInt64#),
+          -- , ('GHC.quotInt64#, 'quotInt64#)
+          -- , ('GHC.remInt64#, 'remInt64#)
+          -- , ('GHC.uncheckedIShiftL64#, 'uncheckedIShiftL64#)
+          -- , ('GHC.uncheckedIShiftRA64#, 'uncheckedIShiftRA64#)
+          -- , ('GHC.uncheckedIShiftRL64#, 'uncheckedIShiftRL64#)
+          ('GHC.negateInt64#, 'negateInt64#),
+          ('GHC.eqInt64#, 'eqInt64#),
+          ('GHC.neInt64#, 'neInt64#),
+          ('GHC.geInt64#, 'geInt64#),
+          ('GHC.gtInt64#, 'gtInt64#),
+          ('GHC.leInt64#, 'leInt64#),
+          ('GHC.ltInt64#, 'ltInt64#),
+          -- Word# primitive operations.
+          ------------------------------
+          ('GHC.wordToWord8#, 'wordToWord8#),
+          ('GHC.wordToWord16#, 'wordToWord16#),
+          ('GHC.wordToWord32#, 'wordToWord32#),
+          ('GHC.wordToWord64#, 'wordToWord64#),
+          ('GHC.word2Int#, 'word2Int#),
+          -- , ('GHC.word2Float#, 'word2Float#)
+          -- , ('GHC.word2Double#, 'word2Double#)
+          ('GHC.plusWord#, 'plusWord#),
+          ('GHC.minusWord#, 'minusWord#),
+          ('GHC.timesWord#, 'timesWord#),
+          ('GHC.addWordC#, 'addWordC#),
+          ('GHC.subWordC#, 'subWordC#),
+          -- , ('GHC.plusWord2#, 'plusWord2#)
+          -- , ('GHC.timesWord2#, 'timesWord2#)
+          -- , ('GHC.quotWord#, 'quotWord#)
+          -- , ('GHC.remWord#, 'remWord#)
+          -- , ('GHC.quotRemWord#, 'quotRemWord#)
+          -- , ('GHC.quotRemWord2#, 'quotRemWord2#)
+          ('GHC.and#, 'and#),
+          ('GHC.or#, 'or#),
+          ('GHC.xor#, 'xor#),
+          ('GHC.not#, 'not#),
+          ('GHC.uncheckedShiftL#, 'uncheckedShiftL#),
+          ('GHC.uncheckedShiftRL#, 'uncheckedShiftRL#),
+          ('GHC.eqWord#, 'eqWord#),
+          ('GHC.neWord#, 'neWord#),
+          ('GHC.geWord#, 'geWord#),
+          ('GHC.gtWord#, 'gtWord#),
+          ('GHC.leWord#, 'leWord#),
+          ('GHC.ltWord#, 'ltWord#),
+          -- Word8# primitive operations.
+          ------------------------------
+          ('GHC.word8ToWord#, 'word8ToWord#),
+          ('GHC.word8ToInt8#, 'word8ToInt8#),
+          ('GHC.plusWord8#, 'plusWord8#),
+          ('GHC.subWord8#, 'subWord8#),
+          ('GHC.timesWord8#, 'timesWord8#),
+          -- , ('GHC.quotWord8#, 'quotWord8#)
+          -- , ('GHC.remWord8#, 'remWord8#)
+          -- , ('GHC.quotRemWord8#, 'quotRemWord8#)
+          ('GHC.andWord8#, 'andWord8#),
+          ('GHC.orWord8#, 'orWord8#),
+          ('GHC.xorWord8#, 'xorWord8#),
+          ('GHC.notWord8#, 'notWord8#),
+          -- , ('GHC.uncheckedShiftLWord8#, 'uncheckedShiftLWord8#)
+          -- , ('GHC.uncheckedShiftRLWord8#, 'uncheckedShiftRLWord8#)
+          ('GHC.eqWord8#, 'eqWord8#),
+          ('GHC.neWord8#, 'neWord8#),
+          ('GHC.geWord8#, 'geWord8#),
+          ('GHC.gtWord8#, 'gtWord8#),
+          ('GHC.leWord8#, 'leWord8#),
+          ('GHC.ltWord8#, 'ltWord8#),
+          -- Word16# primitive operations.
+          ------------------------------
+          ('GHC.word16ToWord#, 'word16ToWord#),
+          ('GHC.word16ToInt16#, 'word16ToInt16#),
+          ('GHC.plusWord16#, 'plusWord16#),
+          ('GHC.subWord16#, 'subWord16#),
+          ('GHC.timesWord16#, 'timesWord16#),
+          -- , ('GHC.quotWord16#, 'quotWord16#)
+          -- , ('GHC.remWord16#, 'remWord16#)
+          -- , ('GHC.quotRemWord16#, 'quotRemWord16#)
+          ('GHC.andWord16#, 'andWord16#),
+          ('GHC.orWord16#, 'orWord16#),
+          ('GHC.xorWord16#, 'xorWord16#),
+          ('GHC.notWord16#, 'notWord16#),
+          -- , ('GHC.uncheckedShiftLWord16#, 'uncheckedShiftLWord16#)
+          -- , ('GHC.uncheckedShiftRLWord16#, 'uncheckedShiftRLWord16#)
+          ('GHC.eqWord16#, 'eqWord16#),
+          ('GHC.neWord16#, 'neWord16#),
+          ('GHC.geWord16#, 'geWord16#),
+          ('GHC.gtWord16#, 'gtWord16#),
+          ('GHC.leWord16#, 'leWord16#),
+          ('GHC.ltWord16#, 'ltWord16#),
+          -- Word32# primitive operations.
+          ------------------------------
+          ('GHC.word32ToWord#, 'word32ToWord#),
+          ('GHC.word32ToInt32#, 'word32ToInt32#),
+          ('GHC.plusWord32#, 'plusWord32#),
+          ('GHC.subWord32#, 'subWord32#),
+          ('GHC.timesWord32#, 'timesWord32#),
+          -- , ('GHC.quotWord32#, 'quotWord32#)
+          -- , ('GHC.remWord32#, 'remWord32#)
+          -- , ('GHC.quotRemWord32#, 'quotRemWord32#)
+          ('GHC.andWord32#, 'andWord32#),
+          ('GHC.orWord32#, 'orWord32#),
+          ('GHC.xorWord32#, 'xorWord32#),
+          ('GHC.notWord32#, 'notWord32#),
+          -- , ('GHC.uncheckedShiftLWord32#, 'uncheckedShiftLWord32#)
+          -- , ('GHC.uncheckedShiftRLWord32#, 'uncheckedShiftRLWord32#)
+          ('GHC.eqWord32#, 'eqWord32#),
+          ('GHC.neWord32#, 'neWord32#),
+          ('GHC.geWord32#, 'geWord32#),
+          ('GHC.gtWord32#, 'gtWord32#),
+          ('GHC.leWord32#, 'leWord32#),
+          ('GHC.ltWord32#, 'ltWord32#),
+          -- Word64# primitive operations.
+          ------------------------------
+          ('GHC.word64ToWord#, 'word64ToWord#),
+          ('GHC.word64ToInt64#, 'word64ToInt64#),
+          ('GHC.plusWord64#, 'plusWord64#),
+          ('GHC.subWord64#, 'subWord64#),
+          ('GHC.timesWord64#, 'timesWord64#),
+          -- , ('GHC.quotWord64#, 'quotWord64#)
+          -- , ('GHC.remWord64#, 'remWord64#)
+          ('GHC.and64#, 'and64#),
+          ('GHC.or64#, 'or64#),
+          ('GHC.xor64#, 'xor64#),
+          ('GHC.not64#, 'not64#),
+          -- , ('GHC.uncheckedShiftL64#, 'uncheckedShiftL64#)
+          -- , ('GHC.uncheckedShiftRL64#, 'uncheckedShiftRL64#)
+          ('GHC.eqWord64#, 'eqWord64#),
+          ('GHC.neWord64#, 'neWord64#),
+          ('GHC.geWord64#, 'geWord64#),
+          ('GHC.gtWord64#, 'gtWord64#),
+          ('GHC.leWord64#, 'leWord64#),
+          ('GHC.ltWord64#, 'ltWord64#),
+          -- Haskell functions without unfoldings.
+          ----------------------------------------
+          -- NOTE: Ideally we would not have these. It's just that GHC tosses
+          -- their unfolding and we cannot get 'base' to be compiled with the flag
+          -- 'expose-all-unfoldings' as 'base' is tied to the compiler...
+          ('GHC.integerFromWord#, 'integerFromWord#),
+          ('GHC.integerToWord#, 'integerToWord#),
+          ('GHC.integerFromNatural, 'integerFromNatural),
+          ('GHC.integerToNatural, 'integerToNatural),
+          ('GHC.integerToInt#, 'integerToInt#),
+          ('GHC.integerSub, 'integerSub),
+          ('GHC.naturalAdd, 'naturalAdd),
+          ('GHC.naturalSubThrow, 'naturalSubThrow),
+          ('GHC.noinline, 'noinline),
+          ('GHC.undefined, 'undefined),
+          ('GHC.throw, 'throw),
+          ('GHC.patError, 'patError'),
+          ('GHC.withSomeSNat, 'withSomeSNat),
+          ('GHC.map, 'map),
+          ('GHC.zip, 'zip),
+          -- ByteString operations.
+          ------------------------
+          ('BS.empty, 'bsEmpty),
+          ('BS.singleton, 'bsSingleton),
+          ('BS.index, 'bsIndex),
+          ('BS.head, 'bsHead)
+        ]
+    }
 
 type BitVecPW = Pantomime.BitVec Pantomime.PlatformWordSize
 
@@ -405,18 +394,18 @@ type BitVec64 = Pantomime.BitVec 64
 
 type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
 
-fromBV
-  :: forall r n (a :: TYPE r)
-   . Pantomime.Embeddable (Pantomime.BitVec n) a
-  => Pantomime.BitVec n
-  -> a
+fromBV ::
+  forall r n (a :: TYPE r).
+  (Pantomime.Embeddable (Pantomime.BitVec n) a) =>
+  Pantomime.BitVec n ->
+  a
 fromBV = Pantomime.embed
 
-toBV
-  :: forall r n (a :: TYPE r)
-   . Pantomime.Embeddable (Pantomime.BitVec n) a
-  => a
-  -> Pantomime.BitVec n
+toBV ::
+  forall r n (a :: TYPE r).
+  (Pantomime.Embeddable (Pantomime.BitVec n) a) =>
+  a ->
+  Pantomime.BitVec n
 toBV = Pantomime.project
 
 bool2I# :: Pantomime.Bool -> Int#
@@ -451,11 +440,11 @@ intToInt32# x = Pantomime.toInt32# $ Pantomime.bvselect @0 $ Pantomime.fromInt# 
 intToInt64# :: Int# -> Int64#
 intToInt64# x = Pantomime.toInt64# $ Pantomime.bvselect @0 $ Pantomime.fromInt# x
 
-binaryInt#
-  :: (BitVecPW -> BitVecPW -> BitVecPW)
-  -> Int#
-  -> Int#
-  -> Int#
+binaryInt# ::
+  (BitVecPW -> BitVecPW -> BitVecPW) ->
+  Int# ->
+  Int# ->
+  Int#
 binaryInt# f lhs rhs = do
   let lhs' = Pantomime.fromInt# lhs
   let rhs' = Pantomime.fromInt# rhs
@@ -470,15 +459,15 @@ binaryInt# f lhs rhs = do
 (*#) :: Int# -> Int# -> Int#
 (*#) = binaryInt# (*)
 
-binaryIntC#
-  :: (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
-  -> Int#
-  -> Int#
-  -> (# Int#, Int# #)
+binaryIntC# ::
+  (forall n. (KnownNat n) => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n) ->
+  Int# ->
+  Int# ->
+  (# Int#, Int# #)
 binaryIntC# f lhs rhs = do
-  let project' x
-        = Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1)
-        $ Pantomime.fromInt# x
+  let project' x =
+        Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1) $
+          Pantomime.fromInt# x
   let lhs' = project' lhs
   let rhs' = project' rhs
 
@@ -503,10 +492,10 @@ orI# = binaryInt# Pantomime.bvor
 xorI# :: Int# -> Int# -> Int#
 xorI# = binaryInt# Pantomime.bvxor
 
-unaryInt#
-  :: (BitVecPW -> BitVecPW)
-  -> Int#
-  -> Int#
+unaryInt# ::
+  (BitVecPW -> BitVecPW) ->
+  Int# ->
+  Int#
 unaryInt# f x = do
   let x' = Pantomime.fromInt# x
   Pantomime.toInt# $ f x'
@@ -517,11 +506,11 @@ notI# = unaryInt# Pantomime.bvnot
 negateInt# :: Int# -> Int#
 negateInt# = unaryInt# Pantomime.bvneg
 
-compareInt#
-  :: (BitVecPW -> BitVecPW -> Pantomime.Bool)
-  -> Int#
-  -> Int#
-  -> Int#
+compareInt# ::
+  (BitVecPW -> BitVecPW -> Pantomime.Bool) ->
+  Int# ->
+  Int# ->
+  Int#
 compareInt# f lhs rhs = do
   let lhs' = Pantomime.fromInt# lhs
   let rhs' = Pantomime.fromInt# rhs
@@ -551,11 +540,11 @@ int8ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt8# x
 int8ToWord8# :: Int8# -> Word8#
 int8ToWord8# x = Pantomime.toWord8# $ Pantomime.fromInt8# x
 
-binaryInt8#
-  :: (BitVec8 -> BitVec8 -> BitVec8)
-  -> Int8#
-  -> Int8#
-  -> Int8#
+binaryInt8# ::
+  (BitVec8 -> BitVec8 -> BitVec8) ->
+  Int8# ->
+  Int8# ->
+  Int8#
 binaryInt8# f lhs rhs = do
   let lhs' = Pantomime.fromInt8# lhs
   let rhs' = Pantomime.fromInt8# rhs
@@ -570,10 +559,10 @@ subInt8# = binaryInt8# (-)
 timesInt8# :: Int8# -> Int8# -> Int8#
 timesInt8# = binaryInt8# (*)
 
-unaryInt8#
-  :: (BitVec8 -> BitVec8)
-  -> Int8#
-  -> Int8#
+unaryInt8# ::
+  (BitVec8 -> BitVec8) ->
+  Int8# ->
+  Int8#
 unaryInt8# f x = do
   let x' = Pantomime.fromInt8# x
   Pantomime.toInt8# $ f x'
@@ -581,11 +570,11 @@ unaryInt8# f x = do
 negateInt8# :: Int8# -> Int8#
 negateInt8# = unaryInt8# negate
 
-compareInt8#
-  :: (BitVec8 -> BitVec8 -> Pantomime.Bool)
-  -> Int8#
-  -> Int8#
-  -> Int#
+compareInt8# ::
+  (BitVec8 -> BitVec8 -> Pantomime.Bool) ->
+  Int8# ->
+  Int8# ->
+  Int#
 compareInt8# f lhs rhs = do
   let lhs' = Pantomime.fromInt8# lhs
   let rhs' = Pantomime.fromInt8# rhs
@@ -615,11 +604,11 @@ int16ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt16# x
 int16ToWord16# :: Int16# -> Word16#
 int16ToWord16# x = Pantomime.toWord16# $ Pantomime.fromInt16# x
 
-binaryInt16#
-  :: (BitVec16 -> BitVec16 -> BitVec16)
-  -> Int16#
-  -> Int16#
-  -> Int16#
+binaryInt16# ::
+  (BitVec16 -> BitVec16 -> BitVec16) ->
+  Int16# ->
+  Int16# ->
+  Int16#
 binaryInt16# f lhs rhs = do
   let lhs' = Pantomime.fromInt16# lhs
   let rhs' = Pantomime.fromInt16# rhs
@@ -634,10 +623,10 @@ subInt16# = binaryInt16# (-)
 timesInt16# :: Int16# -> Int16# -> Int16#
 timesInt16# = binaryInt16# (*)
 
-unaryInt16#
-  :: (BitVec16 -> BitVec16)
-  -> Int16#
-  -> Int16#
+unaryInt16# ::
+  (BitVec16 -> BitVec16) ->
+  Int16# ->
+  Int16#
 unaryInt16# f x = do
   let x' = Pantomime.fromInt16# x
   Pantomime.toInt16# $ f x'
@@ -645,11 +634,11 @@ unaryInt16# f x = do
 negateInt16# :: Int16# -> Int16#
 negateInt16# = unaryInt16# negate
 
-compareInt16#
-  :: (BitVec16 -> BitVec16 -> Pantomime.Bool)
-  -> Int16#
-  -> Int16#
-  -> Int#
+compareInt16# ::
+  (BitVec16 -> BitVec16 -> Pantomime.Bool) ->
+  Int16# ->
+  Int16# ->
+  Int#
 compareInt16# f lhs rhs = do
   let lhs' = Pantomime.fromInt16# lhs
   let rhs' = Pantomime.fromInt16# rhs
@@ -679,11 +668,11 @@ int32ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt32# x
 int32ToWord32# :: Int32# -> Word32#
 int32ToWord32# x = Pantomime.toWord32# $ Pantomime.fromInt32# x
 
-binaryInt32#
-  :: (BitVec32 -> BitVec32 -> BitVec32)
-  -> Int32#
-  -> Int32#
-  -> Int32#
+binaryInt32# ::
+  (BitVec32 -> BitVec32 -> BitVec32) ->
+  Int32# ->
+  Int32# ->
+  Int32#
 binaryInt32# f lhs rhs = do
   let lhs' = Pantomime.fromInt32# lhs
   let rhs' = Pantomime.fromInt32# rhs
@@ -698,10 +687,10 @@ subInt32# = binaryInt32# (-)
 timesInt32# :: Int32# -> Int32# -> Int32#
 timesInt32# = binaryInt32# (*)
 
-unaryInt32#
-  :: (BitVec32 -> BitVec32)
-  -> Int32#
-  -> Int32#
+unaryInt32# ::
+  (BitVec32 -> BitVec32) ->
+  Int32# ->
+  Int32#
 unaryInt32# f x = do
   let x' = Pantomime.fromInt32# x
   Pantomime.toInt32# $ f x'
@@ -709,11 +698,11 @@ unaryInt32# f x = do
 negateInt32# :: Int32# -> Int32#
 negateInt32# = unaryInt32# negate
 
-compareInt32#
-  :: (BitVec32 -> BitVec32 -> Pantomime.Bool)
-  -> Int32#
-  -> Int32#
-  -> Int#
+compareInt32# ::
+  (BitVec32 -> BitVec32 -> Pantomime.Bool) ->
+  Int32# ->
+  Int32# ->
+  Int#
 compareInt32# f lhs rhs = do
   let lhs' = Pantomime.fromInt32# lhs
   let rhs' = Pantomime.fromInt32# rhs
@@ -743,11 +732,11 @@ int64ToInt# x = Pantomime.toInt# $ Pantomime.bvsext $ Pantomime.fromInt64# x
 int64ToWord64# :: Int64# -> Word64#
 int64ToWord64# x = Pantomime.toWord64# $ Pantomime.fromInt64# x
 
-binaryInt64#
-  :: (BitVec64 -> BitVec64 -> BitVec64)
-  -> Int64#
-  -> Int64#
-  -> Int64#
+binaryInt64# ::
+  (BitVec64 -> BitVec64 -> BitVec64) ->
+  Int64# ->
+  Int64# ->
+  Int64#
 binaryInt64# f lhs rhs = do
   let lhs' = Pantomime.fromInt64# lhs
   let rhs' = Pantomime.fromInt64# rhs
@@ -762,10 +751,10 @@ subInt64# = binaryInt64# (-)
 timesInt64# :: Int64# -> Int64# -> Int64#
 timesInt64# = binaryInt64# (*)
 
-unaryInt64#
-  :: (BitVec64 -> BitVec64)
-  -> Int64#
-  -> Int64#
+unaryInt64# ::
+  (BitVec64 -> BitVec64) ->
+  Int64# ->
+  Int64#
 unaryInt64# f x = do
   let x' = Pantomime.fromInt64# x
   Pantomime.toInt64# $ f x'
@@ -773,11 +762,11 @@ unaryInt64# f x = do
 negateInt64# :: Int64# -> Int64#
 negateInt64# = unaryInt64# negate
 
-compareInt64#
-  :: (BitVec64 -> BitVec64 -> Pantomime.Bool)
-  -> Int64#
-  -> Int64#
-  -> Int#
+compareInt64# ::
+  (BitVec64 -> BitVec64 -> Pantomime.Bool) ->
+  Int64# ->
+  Int64# ->
+  Int#
 compareInt64# f lhs rhs = do
   let lhs' = Pantomime.fromInt64# lhs
   let rhs' = Pantomime.fromInt64# rhs
@@ -816,11 +805,11 @@ wordToWord32# x = Pantomime.toWord32# $ Pantomime.bvselect @0 $ Pantomime.fromWo
 wordToWord64# :: Word# -> Word64#
 wordToWord64# x = Pantomime.toWord64# $ Pantomime.bvselect @0 $ Pantomime.fromWord# x
 
-binaryWord#
-  :: (BitVecPW -> BitVecPW -> BitVecPW)
-  -> Word#
-  -> Word#
-  -> Word#
+binaryWord# ::
+  (BitVecPW -> BitVecPW -> BitVecPW) ->
+  Word# ->
+  Word# ->
+  Word#
 binaryWord# f lhs rhs = do
   let lhs' = Pantomime.fromWord# lhs
   let rhs' = Pantomime.fromWord# rhs
@@ -835,15 +824,15 @@ minusWord# = binaryWord# (-)
 timesWord# :: Word# -> Word# -> Word#
 timesWord# = binaryWord# (*)
 
-binaryWordC#
-  :: (forall n. KnownNat n => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n)
-  -> Word#
-  -> Word#
-  -> (# Word#, Int# #)
+binaryWordC# ::
+  (forall n. (KnownNat n) => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n) ->
+  Word# ->
+  Word# ->
+  (# Word#, Int# #)
 binaryWordC# f lhs rhs = do
-  let project' x
-        = Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1)
-        $ Pantomime.fromWord# x
+  let project' x =
+        Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1) $
+          Pantomime.fromWord# x
   let lhs' = project' lhs
   let rhs' = project' rhs
 
@@ -888,11 +877,11 @@ uncheckedShiftRL# val idx = do
   let idx' = Pantomime.fromInt# idx
   Pantomime.toWord# $ Pantomime.bvlshr val' idx'
 
-compareWord#
-  :: (BitVecPW -> BitVecPW -> Pantomime.Bool)
-  -> Word#
-  -> Word#
-  -> Int#
+compareWord# ::
+  (BitVecPW -> BitVecPW -> Pantomime.Bool) ->
+  Word# ->
+  Word# ->
+  Int#
 compareWord# f lhs rhs = do
   let lhs' = Pantomime.fromWord# lhs
   let rhs' = Pantomime.fromWord# rhs
@@ -922,11 +911,11 @@ word8ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord8# x
 word8ToInt8# :: Word8# -> Int8#
 word8ToInt8# x = Pantomime.toInt8# $ Pantomime.fromWord8# x
 
-binaryWord8#
-  :: (BitVec8 -> BitVec8 -> BitVec8)
-  -> Word8#
-  -> Word8#
-  -> Word8#
+binaryWord8# ::
+  (BitVec8 -> BitVec8 -> BitVec8) ->
+  Word8# ->
+  Word8# ->
+  Word8#
 binaryWord8# f lhs rhs = do
   let lhs' = Pantomime.fromWord8# lhs
   let rhs' = Pantomime.fromWord8# rhs
@@ -953,11 +942,11 @@ xorWord8# = binaryWord8# Pantomime.bvxor
 notWord8# :: Word8# -> Word8#
 notWord8# x = Pantomime.toWord8# $ Pantomime.bvnot $ Pantomime.fromWord8# x
 
-compareWord8#
-  :: (BitVec8 -> BitVec8 -> Pantomime.Bool)
-  -> Word8#
-  -> Word8#
-  -> Int#
+compareWord8# ::
+  (BitVec8 -> BitVec8 -> Pantomime.Bool) ->
+  Word8# ->
+  Word8# ->
+  Int#
 compareWord8# f lhs rhs = do
   let lhs' = Pantomime.fromWord8# lhs
   let rhs' = Pantomime.fromWord8# rhs
@@ -987,11 +976,11 @@ word16ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord16# x
 word16ToInt16# :: Word16# -> Int16#
 word16ToInt16# x = Pantomime.toInt16# $ Pantomime.fromWord16# x
 
-binaryWord16#
-  :: (BitVec16 -> BitVec16 -> BitVec16)
-  -> Word16#
-  -> Word16#
-  -> Word16#
+binaryWord16# ::
+  (BitVec16 -> BitVec16 -> BitVec16) ->
+  Word16# ->
+  Word16# ->
+  Word16#
 binaryWord16# f lhs rhs = do
   let lhs' = Pantomime.fromWord16# lhs
   let rhs' = Pantomime.fromWord16# rhs
@@ -1018,11 +1007,11 @@ xorWord16# = binaryWord16# Pantomime.bvxor
 notWord16# :: Word16# -> Word16#
 notWord16# x = Pantomime.toWord16# $ Pantomime.bvnot $ Pantomime.fromWord16# x
 
-compareWord16#
-  :: (BitVec16 -> BitVec16 -> Pantomime.Bool)
-  -> Word16#
-  -> Word16#
-  -> Int#
+compareWord16# ::
+  (BitVec16 -> BitVec16 -> Pantomime.Bool) ->
+  Word16# ->
+  Word16# ->
+  Int#
 compareWord16# f lhs rhs = do
   let lhs' = Pantomime.fromWord16# lhs
   let rhs' = Pantomime.fromWord16# rhs
@@ -1052,11 +1041,11 @@ word32ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord32# x
 word32ToInt32# :: Word32# -> Int32#
 word32ToInt32# x = Pantomime.toInt32# $ Pantomime.fromWord32# x
 
-binaryWord32#
-  :: (BitVec32 -> BitVec32 -> BitVec32)
-  -> Word32#
-  -> Word32#
-  -> Word32#
+binaryWord32# ::
+  (BitVec32 -> BitVec32 -> BitVec32) ->
+  Word32# ->
+  Word32# ->
+  Word32#
 binaryWord32# f lhs rhs = do
   let lhs' = Pantomime.fromWord32# lhs
   let rhs' = Pantomime.fromWord32# rhs
@@ -1083,11 +1072,11 @@ xorWord32# = binaryWord32# Pantomime.bvxor
 notWord32# :: Word32# -> Word32#
 notWord32# x = Pantomime.toWord32# $ Pantomime.bvnot $ Pantomime.fromWord32# x
 
-compareWord32#
-  :: (BitVec32 -> BitVec32 -> Pantomime.Bool)
-  -> Word32#
-  -> Word32#
-  -> Int#
+compareWord32# ::
+  (BitVec32 -> BitVec32 -> Pantomime.Bool) ->
+  Word32# ->
+  Word32# ->
+  Int#
 compareWord32# f lhs rhs = do
   let lhs' = Pantomime.fromWord32# lhs
   let rhs' = Pantomime.fromWord32# rhs
@@ -1117,11 +1106,11 @@ word64ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord64# x
 word64ToInt64# :: Word64# -> Int64#
 word64ToInt64# x = Pantomime.toInt64# $ Pantomime.fromWord64# x
 
-binaryWord64#
-  :: (BitVec64 -> BitVec64 -> BitVec64)
-  -> Word64#
-  -> Word64#
-  -> Word64#
+binaryWord64# ::
+  (BitVec64 -> BitVec64 -> BitVec64) ->
+  Word64# ->
+  Word64# ->
+  Word64#
 binaryWord64# f lhs rhs = do
   let lhs' = Pantomime.fromWord64# lhs
   let rhs' = Pantomime.fromWord64# rhs
@@ -1148,11 +1137,11 @@ xor64# = binaryWord64# Pantomime.bvxor
 not64# :: Word64# -> Word64#
 not64# x = Pantomime.toWord64# $ Pantomime.bvnot $ Pantomime.fromWord64# x
 
-compareWord64#
-  :: (BitVec64 -> BitVec64 -> Pantomime.Bool)
-  -> Word64#
-  -> Word64#
-  -> Int#
+compareWord64# ::
+  (BitVec64 -> BitVec64 -> Pantomime.Bool) ->
+  Word64# ->
+  Word64# ->
+  Int#
 compareWord64# f lhs rhs = do
   let lhs' = Pantomime.fromWord64# lhs
   let rhs' = Pantomime.fromWord64# rhs
@@ -1194,8 +1183,8 @@ toInteger x = do
     | x < minI -> undefined
     | maxI < x -> undefined
     | otherwise -> do
-      let x' = Pantomime.i2bv @Pantomime.PlatformWordSize x
-      IS $ Pantomime.toInt# x'
+        let x' = Pantomime.i2bv @Pantomime.PlatformWordSize x
+        IS $ Pantomime.toInt# x'
 
 -- TODO: The below definitions exists solely because the unfolding doesn't
 -- exist. There should be a way around this...
@@ -1214,10 +1203,12 @@ integerToNatural = \case
   IN x -> GHC.naturalFromBigNat# x
 
 integerFromWord# :: Word# -> Integer
-integerFromWord# w = if
-  | let i = GHC.word2Int# w
-  , GHC.isTrue# (i GHC.>=# 0#) -> IS i
-  | otherwise -> IP (GHC.bigNatFromWord# w)
+integerFromWord# w =
+  if
+    | let i = GHC.word2Int# w,
+      GHC.isTrue# (i GHC.>=# 0#) ->
+        IS i
+    | otherwise -> IP (GHC.bigNatFromWord# w)
 
 integerToInt# :: Integer -> Int#
 integerToInt# = \case
@@ -1232,48 +1223,48 @@ integerToWord# = \case
   IN bn -> GHC.int2Word# $ GHC.negateInt# $ GHC.word2Int# $ GHC.bigNatToWord# bn
 
 integerSub :: Integer -> Integer -> Integer
-integerSub !x      (IS 0#) = x     -- Note [Bangs in Integer functions]
-integerSub (IS x#) (IS y#)
-  = case GHC.subIntC# x# y# of
+integerSub !x (IS 0#) = x -- Note [Bangs in Integer functions]
+integerSub (IS x#) (IS y#) =
+  case GHC.subIntC# x# y# of
     (# z#, 0# #) -> IS z#
-    (# 0#, _  #) -> IN (GHC.bigNatFromWord2# 1## 0##)
-    (# z#, _  #)
-      | GHC.isTrue# (z# GHC.># 0#)
-      -> IN (GHC.bigNatFromWord# (GHC.int2Word# (GHC.negateInt# z#)))
-      | True
-      -> IP (GHC.bigNatFromWord# (GHC.int2Word# z#))
+    (# 0#, _ #) -> IN (GHC.bigNatFromWord2# 1## 0##)
+    (# z#, _ #)
+      | GHC.isTrue# (z# GHC.># 0#) ->
+          IN (GHC.bigNatFromWord# (GHC.int2Word# (GHC.negateInt# z#)))
+      | True ->
+          IP (GHC.bigNatFromWord# (GHC.int2Word# z#))
 integerSub (IS x#) (IP y)
-  | GHC.isTrue# (x# GHC.>=# 0#)
-  = GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# x#))
-  | otherwise
-  = IN (GHC.bigNatAddWord# y (GHC.int2Word# (GHC.negateInt# x#)))
+  | GHC.isTrue# (x# GHC.>=# 0#) =
+      GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# x#))
+  | otherwise =
+      IN (GHC.bigNatAddWord# y (GHC.int2Word# (GHC.negateInt# x#)))
 integerSub (IS x#) (IN y)
-  | GHC.isTrue# (x# GHC.>=# 0#)
-  = IP (GHC.bigNatAddWord# y (GHC.int2Word# x#))
-  | otherwise
-  = GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# (GHC.negateInt# x#)))
-integerSub (IP x) (IP y)
-  = case GHC.bigNatCompare x y of
+  | GHC.isTrue# (x# GHC.>=# 0#) =
+      IP (GHC.bigNatAddWord# y (GHC.int2Word# x#))
+  | otherwise =
+      GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# y (GHC.int2Word# (GHC.negateInt# x#)))
+integerSub (IP x) (IP y) =
+  case GHC.bigNatCompare x y of
     LT -> GHC.integerFromBigNatNeg# (GHC.bigNatSubUnsafe y x)
     EQ -> IS 0#
     GT -> GHC.integerFromBigNat# (GHC.bigNatSubUnsafe x y)
 integerSub (IP x) (IN y) = IP (GHC.bigNatAdd x y)
 integerSub (IN x) (IP y) = IN (GHC.bigNatAdd x y)
-integerSub (IN x) (IN y)
-  = case GHC.bigNatCompare x y of
+integerSub (IN x) (IN y) =
+  case GHC.bigNatCompare x y of
     LT -> GHC.integerFromBigNat# (GHC.bigNatSubUnsafe y x)
     EQ -> IS 0#
     GT -> GHC.integerFromBigNatNeg# (GHC.bigNatSubUnsafe x y)
 integerSub (IP x) (IS y#)
-  | GHC.isTrue# (y# GHC.>=# 0#)
-  = GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# y#))
-  | otherwise
-  = IP (GHC.bigNatAddWord# x (GHC.int2Word# (GHC.negateInt# y#)))
+  | GHC.isTrue# (y# GHC.>=# 0#) =
+      GHC.integerFromBigNat# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# y#))
+  | otherwise =
+      IP (GHC.bigNatAddWord# x (GHC.int2Word# (GHC.negateInt# y#)))
 integerSub (IN x) (IS y#)
-  | GHC.isTrue# (y# GHC.>=# 0#)
-  = IN (GHC.bigNatAddWord# x (GHC.int2Word# y#))
-  | otherwise
-  = GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# (GHC.negateInt# y#)))
+  | GHC.isTrue# (y# GHC.>=# 0#) =
+      IN (GHC.bigNatAddWord# x (GHC.int2Word# y#))
+  | otherwise =
+      GHC.integerFromBigNatNeg# (GHC.bigNatSubWordUnsafe# x (GHC.int2Word# (GHC.negateInt# y#)))
 
 naturalAdd :: Natural -> Natural -> Natural
 naturalAdd = \cases
@@ -1282,17 +1273,17 @@ naturalAdd = \cases
   (NB x) (NB y) -> NB $ GHC.bigNatAdd x y
   (NS x) (NS y) -> case GHC.addWordC# x y of
     (# l, 0# #) -> NS l
-    (# l, c  #) -> NB $ GHC.bigNatFromWord2# (GHC.int2Word# c) l
+    (# l, c #) -> NB $ GHC.bigNatFromWord2# (GHC.int2Word# c) l
 
 naturalSubThrow :: Natural -> Natural -> Natural
 naturalSubThrow (NS _) (NB _) = GHC.raiseUnderflow
 naturalSubThrow (NB x) (NS y) = GHC.naturalFromBigNat# $ GHC.bigNatSubWordUnsafe# x y
 naturalSubThrow (NS x) (NS y) = case GHC.subWordC# x y of
   (# l, 0# #) -> NS l
-  (# _, _  #) -> GHC.raiseUnderflow
+  (# _, _ #) -> GHC.raiseUnderflow
 naturalSubThrow (NB x) (NB y) = case GHC.bigNatSub x y of
-  (# (# #) |   #) -> GHC.raiseUnderflow
-  (#       | z #) -> GHC.naturalFromBigNat# z
+  (# (# #) | #) -> GHC.raiseUnderflow
+  (# | z #) -> GHC.naturalFromBigNat# z
 
 noinline :: a -> a
 noinline = id
@@ -1309,11 +1300,11 @@ throw = GHC.raise# ()
 patError' :: forall q (a :: TYPE q). Addr# -> a
 patError' _ = GHC.raise# ()
 
-withSomeSNat
-  :: forall rep (r :: TYPE rep)
-   . Natural
-  -> (forall n. SNat n -> r)
-  -> r
+withSomeSNat ::
+  forall rep (r :: TYPE rep).
+  Natural ->
+  (forall n. SNat n -> r) ->
+  r
 withSomeSNat n f = f $ unsafeSNat n
 
 map :: (a -> b) -> [a] -> [b]
@@ -1335,24 +1326,24 @@ zip = \cases
 bsEmpty :: ByteString
 bsEmpty =
   let zero = 0 :: Pantomime.BitVec 8
-  in unsafeCoerce $ Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zero
+   in unsafeCoerce $ Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zero
 
 bsSingleton :: Word8 -> ByteString
 bsSingleton (W8# w#) =
   let zeroBv = 0 :: Pantomime.BitVec 8
       zeroIx = 0 :: Pantomime.Integer
       arr = Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zeroBv
-  in unsafeCoerce $ Pantomime.astore arr zeroIx (Pantomime.fromWord8# w#)
+   in unsafeCoerce $ Pantomime.astore arr zeroIx (Pantomime.fromWord8# w#)
 
 bsIndex :: ByteString -> Int -> Word8
 bsIndex bs (I# i#) =
   let arr = unsafeCoerce bs :: ByteStringR
       idx = Pantomime.bvu2i $ Pantomime.fromInt# i#
       val = Pantomime.aselect arr idx
-  in W8# (Pantomime.toWord8# val)
+   in W8# (Pantomime.toWord8# val)
 
 bsHead :: ByteString -> Word8
 bsHead bs =
   let arr = unsafeCoerce bs :: ByteStringR
       val = Pantomime.aselect arr 0
-  in W8# (Pantomime.toWord8# val)
+   in W8# (Pantomime.toWord8# val)
