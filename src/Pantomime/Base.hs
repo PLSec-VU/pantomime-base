@@ -16,12 +16,14 @@ import Data.Constraint.Unsafe (unsafeSNat)
 import Data.List qualified as GHC (zip)
 import GHC.Base
   ( Addr#,
+    IO,
     Int (..),
     Int#,
     Int16#,
     Int32#,
     Int64#,
     Int8#,
+    RealWorld,
     RuntimeRep (..),
     TYPE,
     Word#,
@@ -29,9 +31,14 @@ import GHC.Base
     Word32#,
     Word64#,
     Word8#,
+    returnIO,
+    bindIO,
   )
 import GHC.Base qualified as GHC
+import GHC.IO qualified as GHC.IO
+import GHC.IO.Unsafe qualified as GHC.IO.Unsafe
 import GHC.Exts (IsList (..))
+import System.IO.Unsafe (unsafePerformIO)
 import GHC.Num (Integer (..), Natural (..))
 import GHC.Num qualified as GHC
   ( integerFromBigNat#,
@@ -84,7 +91,9 @@ axioms =
             (''Word16#, ''BitVec16),
             (''Word32#, ''BitVec32),
             (''Word64#, ''BitVec64),
-            (''ByteString, ''ByteStringR)
+            (''ByteString, ''ByteStringR),
+            (''RealWorld, ''FakeWorld),
+            (''IO, ''FakeIO)
           ],
       termAxioms =
         -- Pantomime embed operations.
@@ -371,6 +380,11 @@ axioms =
           ('GHC.throw, 'throw),
           ('GHC.patError, 'patError'),
           ('GHC.withSomeSNat, 'withSomeSNat),
+          ('unsafePerformIO, 'unsafePerformIO_axiom),
+          ('GHC.IO.unsafePerformIO, 'unsafePerformIO_axiom),
+          ('GHC.IO.Unsafe.unsafePerformIO, 'unsafePerformIO_axiom),
+          ('returnIO, 'returnIO_axiom),
+          ('bindIO, 'bindIO_axiom),
           ('GHC.map, 'map),
           ('GHC.zip, 'zip),
           -- ByteString operations.
@@ -393,6 +407,10 @@ type BitVec32 = Pantomime.BitVec 32
 type BitVec64 = Pantomime.BitVec 64
 
 type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
+
+type FakeWorld = Pantomime.Integer
+
+type FakeIO a = FakeWorld -> (FakeWorld, a)
 
 fromBV ::
   forall r n (a :: TYPE r).
@@ -1306,6 +1324,15 @@ withSomeSNat ::
   (forall n. SNat n -> r) ->
   r
 withSomeSNat n f = f $ unsafeSNat n
+
+unsafePerformIO_axiom :: forall a. FakeIO a -> a
+unsafePerformIO_axiom f = case f 0 of (_, a) -> a
+
+returnIO_axiom :: forall a. a -> FakeIO a
+returnIO_axiom a s = (s, a)
+
+bindIO_axiom :: forall a b. FakeIO a -> (a -> FakeIO b) -> FakeIO b
+bindIO_axiom m f s = case m s of (s', a) -> f a s'
 
 map :: (a -> b) -> [a] -> [b]
 map f = do

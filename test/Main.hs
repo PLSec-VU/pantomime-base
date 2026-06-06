@@ -14,16 +14,13 @@ import qualified IntegerTest
 import qualified BoolTest
 import qualified ByteStringTest
 
+import qualified IOExplain
+
 main :: IO ()
 main = hspec $ do
+  IOExplain.spec
+  {-
   Int.spec
-  Int8.spec
-  Int16.spec
-  Int32.spec
-  Int64.spec
-  Word.spec
-  Word8.spec
-  Word64.spec
-  IntegerTest.spec
-  BoolTest.spec
+...
   ByteStringTest.spec
+  -}

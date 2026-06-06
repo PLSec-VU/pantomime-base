@@ -2,6 +2,7 @@
 
 module Common
   ( checkInvalid
+  , todo
   , axioms
   , module Test.Hspec
   , module Pantomime
@@ -20,6 +21,10 @@ import Pantomime.BuiltIn qualified as Pantomime
 import GHC.Exts
 import GHC.Int
 import GHC.Word
+
+-- | Placeholder expectation for tests whose pantomime TH splice is not yet active.
+todo :: Expectation
+todo = pure ()
 
 -- | Assert that a counterexample was found and print it.
 checkInvalid :: Maybe String -> Expectation

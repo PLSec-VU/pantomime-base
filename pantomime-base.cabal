@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      IODiag
       Pantomime.Base
   other-modules:
       Paths_pantomime_base
@@ -81,6 +82,7 @@ test-suite pantomime-base-test
       Int64
       Int8
       IntegerTest
+      IOExplain
       Word
       Word64
       Word8
