@@ -76,6 +76,7 @@ import GHC.TypeNats qualified as GHC (withSomeSNat)
 import GHC.Word (Word8 (..))
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
+import Data.Coerce (Coercible, coerce)
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding (fromInteger, map, toInteger, undefined, zip)
 import Data.Dynamic (Dynamic)
@@ -429,7 +430,7 @@ data FakeWorld = FakeWorld
   , refs :: [Dynamic]
   }
 
-newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
+newtype FakeIO a = FakeIO (FakeWorld -> (FakeWorld, a))
 
 fromBV ::
   forall r n (a :: TYPE r).
@@ -1344,35 +1345,48 @@ withSomeSNat ::
   r
 withSomeSNat n f = f $ unsafeSNat n
 
-newWorld :: FakeWorld
-newWorld = FakeWorld
-  { time = 0
-  , refs = []
-  }
-
 nextWorld :: FakeWorld -> FakeWorld
 nextWorld wrld@(FakeWorld {..}) = wrld {time = time + 1}
 
-unsafePerformIOAxiom :: forall a. IO a -> a
-unsafePerformIOAxiom m = case (unsafeCoerce m :: FakeIO a) of
-  FakeIO f -> case f newWorld of (# _, a #) -> a
+unsafePerformIOAxiom
+  :: forall io a
+   . Coercible FakeIO io
+  => io a
+  -> a
+unsafePerformIOAxiom m = case coerce m of FakeIO f -> case f newWorld of (_, a) -> a
+  where
+    newWorld = FakeWorld
+      { time = 0
+      , refs = []
+      }
 
-withWorld :: forall a. (FakeWorld -> a) -> IO a
-withWorld f = unsafeCoerce (FakeIO $ \s -> (# nextWorld s, f s #))
+returnIOAxiom
+  :: forall io a
+  . Coercible FakeIO io
+  => a -> io a
+returnIOAxiom a = coerce (FakeIO $ \s -> (nextWorld s, a))
 
-returnIOAxiom :: forall a. a -> IO a
-returnIOAxiom a = withWorld (const a)
-
-bindIOAxiom :: forall a b. IO a -> (a -> IO b) -> IO b
-bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> unsafeCoerce (k x) :: FakeIO b))
+bindIOAxiom
+  :: forall io a b
+  . Coercible FakeIO io
+  => io a -> (a -> io b) -> io b
+bindIOAxiom m k = coerce (bindFakeIO (coerce m :: FakeIO a) (\x -> coerce (k x) :: FakeIO b))
   where
     bindFakeIO :: FakeIO a -> (a -> FakeIO b) -> FakeIO b
     bindFakeIO (FakeIO f) g = FakeIO $ \s -> case f s of
-      (# s', a #) -> case g a of
+      (s', a) -> case g a of
         FakeIO n -> n s'
 
-newIORefAxiom :: forall a. a -> IO (IORef a)
-newIORefAxiom a = unsafeCoerce $ withWorld $ \s -> FakeIORef { refID = time s, value = a }
+newIORefAxiom
+  :: forall a io ioref
+  . Coercible FakeIO io
+  => Coercible FakeIORef ioref
+  => a -> io (ioref a)
+newIORefAxiom a = coerce $ FakeIO $ \s ->
+  (nextWorld s, FakeIORef
+  { refID = time s
+  , value = a
+  })
 
 map :: (a -> b) -> [a] -> [b]
 map f = do

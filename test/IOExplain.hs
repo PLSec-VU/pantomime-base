@@ -7,12 +7,11 @@ import Data.IORef
 
 ioRefNop :: Int -> IO Int
 ioRefNop x = do
-  ref <- newIORef x
   pure x
 
 {-# ANN testIO (Theory axioms) #-}
 testIO :: Int -> Pantomime.Bool
-testIO x = Pantomime.boolean (x == unsafePerformIO (ioRefNop x))
+testIO x = Pantomime.boolean (x == unsafePerformIO (pure x))
 
 spec :: Spec
 spec = describe "IO Explanation" $ do
