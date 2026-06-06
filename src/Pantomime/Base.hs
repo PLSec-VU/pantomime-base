@@ -391,10 +391,8 @@ axioms =
           ('GHC.Internal.IO.Unsafe.unsafePerformIO, 'unsafePerformIOAxiom),
           ('returnIO, 'returnIOAxiom),
           ('GHC.Internal.Base.returnIO, 'returnIOAxiom),
-          (mkName "IHaskellPrelude.returnIO", 'returnIOAxiom),
           ('bindIO, 'bindIOAxiom),
           ('GHC.Internal.Base.bindIO, 'bindIOAxiom),
-          (mkName "IHaskellPrelude.bindIO", 'bindIOAxiom),
           ('GHC.map, 'map),
           ('GHC.zip, 'zip),
           -- ByteString operations.
@@ -1335,16 +1333,20 @@ withSomeSNat ::
   r
 withSomeSNat n f = f $ unsafeSNat n
 
-unsafePerformIOAxiom :: forall a. FakeIO a -> a
-unsafePerformIOAxiom (FakeIO f) = case f 0 of (_, a) -> a
+unsafePerformIOAxiom :: forall a. IO a -> a
+unsafePerformIOAxiom m = case (unsafeCoerce m :: FakeIO a) of
+  FakeIO f -> case f 0 of (_, a) -> a
 
-returnIOAxiom :: forall a. a -> FakeIO a
-returnIOAxiom a = FakeIO $ \s -> (s + 1, a)
+returnIOAxiom :: forall a. a -> IO a
+returnIOAxiom a = unsafeCoerce (FakeIO $ \s -> (s + 1, a))
 
-bindIOAxiom :: forall a b. FakeIO a -> (a -> FakeIO b) -> FakeIO b
-bindIOAxiom (FakeIO m) k = FakeIO $ \s -> case m s of
-  (s', a) -> case k a of
-    FakeIO n -> n s'
+bindIOAxiom :: forall a b. IO a -> (a -> IO b) -> IO b
+bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> unsafeCoerce (k x) :: FakeIO b) :: FakeIO b)
+  where
+    bindFakeIO :: FakeIO a -> (a -> FakeIO b) -> FakeIO b
+    bindFakeIO (FakeIO f) g = FakeIO $ \s -> case f s of
+      (s', a) -> case g a of
+        FakeIO n -> n s'
 
 map :: (a -> b) -> [a] -> [b]
 map f = do
