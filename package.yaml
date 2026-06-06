@@ -1,14 +1,14 @@
-name:                pantomime-base
-version:             0.1.0.0
-github:              "githubuser/pantomime-base"
-license:             BSD-3-Clause
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2026 Author name here"
+name: pantomime-base
+version: 0.1.0.0
+github: "githubuser/pantomime-base"
+license: BSD-3-Clause
+author: "Author name here"
+maintainer: "example@example.com"
+copyright: "2026 Author name here"
 
 extra-source-files:
-- README.md
-- CHANGELOG.md
+  - README.md
+  - CHANGELOG.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,55 +17,55 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/pantomime-base#readme>
+description: Please see the README on GitHub at <https://github.com/githubuser/pantomime-base#readme>
 
 default-extensions:
-- AllowAmbiguousTypes
-- BlockArguments
-- ConstraintKinds
-- DataKinds
-- DeriveDataTypeable
-- DeriveTraversable
-- FlexibleContexts
-- FlexibleInstances
-- GADTs
-- ImportQualifiedPost
-- KindSignatures
-- LambdaCase
-- MultiParamTypeClasses
-- MultiWayIf
-- NamedFieldPuns
-- RankNTypes
-- RecordWildCards
-- ScopedTypeVariables
-- TemplateHaskell
-- TupleSections
-- TypeAbstractions
-- TypeApplications
-- TypeFamilies
-- TypeOperators
+  - AllowAmbiguousTypes
+  - BlockArguments
+  - ConstraintKinds
+  - DataKinds
+  - DeriveDataTypeable
+  - DeriveTraversable
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - ImportQualifiedPost
+  - KindSignatures
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TemplateHaskell
+  - TupleSections
+  - TypeAbstractions
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
 
 dependencies:
-- base >= 4.7 && < 5
-- bytestring
-- composition
-- constraints
-- ghc-bignum
-- ghc-prim
-- pantomime
+  - base >= 4.7 && < 5
+  - bytestring
+  - composition
+  - constraints
+  - ghc-bignum
+  - ghc-prim
+  - pantomime
 
 ghc-options:
-- -Wall
-- -Wcompat
-- -Widentities
-- -Wincomplete-record-updates
-- -Wincomplete-uni-patterns
-- -Wmissing-export-lists
-- -Wmissing-home-modules
-- -Wpartial-fields
-- -Wredundant-constraints
-- -Wprepositive-qualified-module
-- -fexpose-all-unfoldings
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
+  - -Wprepositive-qualified-module
+  - -fexpose-all-unfoldings
 
 library:
   source-dirs: src
@@ -75,17 +75,17 @@ tests:
     main: Main.hs
     source-dirs: test
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -fplugin=Pantomime
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -fplugin=Pantomime
     default-extensions:
-    - MagicHash
-    - UnboxedTuples
+      - MagicHash
+      - UnboxedTuples
     dependencies:
-    - pantomime-base
-    - pantomime
-    - bytestring
-    - hspec
-    - hspec-expectations
-    - ghc-prim
+      - pantomime-base
+      - pantomime
+      - bytestring
+      - hspec
+      - hspec-expectations
+      - ghc-prim

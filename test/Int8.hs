@@ -1,4 +1,3 @@
-
 module Int8 (spec) where
 
 import Common

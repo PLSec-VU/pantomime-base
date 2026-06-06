@@ -1,8 +1,8 @@
 module ByteStringTest (spec) where
 
 import Common
-import Pantomime.BuiltIn qualified as Pantomime
 import Data.ByteString qualified as BS
+import Pantomime.BuiltIn qualified as Pantomime
 
 {-# ANN bsSingletonIndex (Theory axioms) #-}
 bsSingletonIndex :: Word8 -> Pantomime.Bool
