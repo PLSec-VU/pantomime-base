@@ -418,7 +418,7 @@ type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
 
 type FakeWorld = Pantomime.Integer
 
-newtype FakeIO a = FakeIO (FakeWorld -> (FakeWorld, a))
+newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
 
 fromBV ::
   forall r n (a :: TYPE r).
@@ -1335,17 +1335,17 @@ withSomeSNat n f = f $ unsafeSNat n
 
 unsafePerformIOAxiom :: forall a. IO a -> a
 unsafePerformIOAxiom m = case (unsafeCoerce m :: FakeIO a) of
-  FakeIO f -> case f 0 of (_, a) -> a
+  FakeIO f -> case f 0 of (# _, a #) -> a
 
 returnIOAxiom :: forall a. a -> IO a
-returnIOAxiom a = unsafeCoerce (FakeIO $ \s -> (s + 1, a))
+returnIOAxiom a = unsafeCoerce (FakeIO $ \s -> (# s + 1, a #))
 
 bindIOAxiom :: forall a b. IO a -> (a -> IO b) -> IO b
-bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> unsafeCoerce (k x) :: FakeIO b) :: FakeIO b)
+bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> unsafeCoerce (k x) :: FakeIO b))
   where
     bindFakeIO :: FakeIO a -> (a -> FakeIO b) -> FakeIO b
     bindFakeIO (FakeIO f) g = FakeIO $ \s -> case f s of
-      (s', a) -> case g a of
+      (# s', a #) -> case g a of
         FakeIO n -> n s'
 
 map :: (a -> b) -> [a] -> [b]

@@ -5,17 +5,6 @@
 
 packages:
 - completed:
-    name: pantomime
-    pantry-tree:
-      sha256: ce69f7b7163d1a836c3950a2c870d3763c49cccf09523d3d597b16b54f63b48b
-      size: 2948
-    sha256: 308aca7ac011c4f6bf3aa836b353ac76b7d4095c4a295fcf0d6e141bdbf93c5c
-    size: 89406
-    url: https://github.com/PLSec-VU/pantomime/archive/bb61e491b510d81b0a0e99c50232aa0afb23e21e.tar.gz
-    version: 0.1.0.0
-  original:
-    url: https://github.com/PLSec-VU/pantomime/archive/bb61e491b510d81b0a0e99c50232aa0afb23e21e.tar.gz
-- completed:
     name: grisette
     pantry-tree:
       sha256: ac978bcc6a35ee65677dbe41373c2799759457dedee85c6888a2cb7b362a2068
