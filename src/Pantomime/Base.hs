@@ -74,11 +74,12 @@ import GHC.Prim.Exception qualified as GHC
 import GHC.TypeLits (KnownNat, SNat, type (+))
 import GHC.TypeNats qualified as GHC (withSomeSNat)
 import GHC.Word (Word8 (..))
-import Language.Haskell.TH (mkName)
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding (fromInteger, map, toInteger, undefined, zip)
+import Data.Dynamic (Dynamic)
+import Data.IORef
 
 axioms :: PluginAxioms
 axioms =
@@ -97,7 +98,8 @@ axioms =
             (''Word64#, ''BitVec64),
             (''ByteString, ''ByteStringR),
             (''RealWorld, ''FakeWorld),
-            (''IO, ''FakeIO)
+            (''IO, ''FakeIO),
+            (''IORef, ''FakeIORef)
           ],
       termAxioms =
         -- Pantomime embed operations.
@@ -393,6 +395,7 @@ axioms =
           ('GHC.Internal.Base.returnIO, 'returnIOAxiom),
           ('bindIO, 'bindIOAxiom),
           ('GHC.Internal.Base.bindIO, 'bindIOAxiom),
+          ('newIORef, 'newIORefAxiom),
           ('GHC.map, 'map),
           ('GHC.zip, 'zip),
           -- ByteString operations.
@@ -416,7 +419,15 @@ type BitVec64 = Pantomime.BitVec 64
 
 type ByteStringR = Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
 
-type FakeWorld = Pantomime.Integer
+data FakeIORef a = FakeIORef
+  { refID :: Pantomime.Integer
+  , value :: a
+  }
+
+data FakeWorld = FakeWorld
+  { time :: Pantomime.Integer
+  , refs :: [Dynamic]
+  }
 
 newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
 
@@ -1333,12 +1344,24 @@ withSomeSNat ::
   r
 withSomeSNat n f = f $ unsafeSNat n
 
+newWorld :: FakeWorld
+newWorld = FakeWorld
+  { time = 0
+  , refs = []
+  }
+
+nextWorld :: FakeWorld -> FakeWorld
+nextWorld wrld@(FakeWorld {..}) = wrld {time = time + 1}
+
 unsafePerformIOAxiom :: forall a. IO a -> a
 unsafePerformIOAxiom m = case (unsafeCoerce m :: FakeIO a) of
-  FakeIO f -> case f 0 of (# _, a #) -> a
+  FakeIO f -> case f newWorld of (# _, a #) -> a
+
+withWorld :: forall a. (FakeWorld -> a) -> IO a
+withWorld f = unsafeCoerce (FakeIO $ \s -> (# nextWorld s, f s #))
 
 returnIOAxiom :: forall a. a -> IO a
-returnIOAxiom a = unsafeCoerce (FakeIO $ \s -> (# s + 1, a #))
+returnIOAxiom a = withWorld (const a)
 
 bindIOAxiom :: forall a b. IO a -> (a -> IO b) -> IO b
 bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> unsafeCoerce (k x) :: FakeIO b))
@@ -1347,6 +1370,9 @@ bindIOAxiom m k = unsafeCoerce (bindFakeIO (unsafeCoerce m :: FakeIO a) (\x -> u
     bindFakeIO (FakeIO f) g = FakeIO $ \s -> case f s of
       (# s', a #) -> case g a of
         FakeIO n -> n s'
+
+newIORefAxiom :: forall a. a -> IO (IORef a)
+newIORefAxiom a = unsafeCoerce $ withWorld $ \s -> FakeIORef { refID = time s, value = a }
 
 map :: (a -> b) -> [a] -> [b]
 map f = do
