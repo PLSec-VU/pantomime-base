@@ -3,11 +3,7 @@ module IOExplain (spec) where
 import Common
 import Pantomime.BuiltIn qualified as Pantomime
 import System.IO.Unsafe (unsafePerformIO)
-import Data.IORef
-
-ioRefNop :: Int -> IO Int
-ioRefNop x = do
-  pure x
+import GHC.Base
 
 {-# ANN testIO (Theory axioms) #-}
 testIO :: Int -> Pantomime.Bool

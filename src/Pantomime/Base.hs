@@ -16,7 +16,6 @@ import Data.Constraint.Unsafe (unsafeSNat)
 import Data.List qualified as GHC (zip)
 import GHC.Base
   ( Addr#,
-    IO,
     Int (..),
     Int#,
     Int16#,
@@ -430,7 +429,7 @@ data FakeWorld = FakeWorld
   , refs :: [Dynamic]
   }
 
-newtype FakeIO a = FakeIO (FakeWorld -> (FakeWorld, a))
+newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
 
 fromBV ::
   forall r n (a :: TYPE r).
@@ -1353,7 +1352,7 @@ unsafePerformIOAxiom
    . Coercible FakeIO io
   => io a
   -> a
-unsafePerformIOAxiom m = case coerce m of FakeIO f -> case f newWorld of (_, a) -> a
+unsafePerformIOAxiom m = case coerce m of FakeIO f -> case f newWorld of (# _, a #) -> a
   where
     newWorld = FakeWorld
       { time = 0
@@ -1364,7 +1363,7 @@ returnIOAxiom
   :: forall io a
   . Coercible FakeIO io
   => a -> io a
-returnIOAxiom a = coerce (FakeIO $ \s -> (nextWorld s, a))
+returnIOAxiom a = coerce (FakeIO $ \s -> (# nextWorld s, a #))
 
 bindIOAxiom
   :: forall io a b
@@ -1374,7 +1373,7 @@ bindIOAxiom m k = coerce (bindFakeIO (coerce m :: FakeIO a) (\x -> coerce (k x) 
   where
     bindFakeIO :: FakeIO a -> (a -> FakeIO b) -> FakeIO b
     bindFakeIO (FakeIO f) g = FakeIO $ \s -> case f s of
-      (s', a) -> case g a of
+      (# s', a #) -> case g a of
         FakeIO n -> n s'
 
 newIORefAxiom
@@ -1383,10 +1382,10 @@ newIORefAxiom
   => Coercible FakeIORef ioref
   => a -> io (ioref a)
 newIORefAxiom a = coerce $ FakeIO $ \s ->
-  (nextWorld s, FakeIORef
+  (# nextWorld s, FakeIORef
   { refID = time s
   , value = a
-  })
+  } #)
 
 map :: (a -> b) -> [a] -> [b]
 map f = do

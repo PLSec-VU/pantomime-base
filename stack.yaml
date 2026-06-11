@@ -4,7 +4,8 @@ packages:
   - .
 
 extra-deps:
-  - ../pantomime
+  - github: PLSec-VU/pantomime
+    commit: e1fe436420b7cde585c1b2caa09883c71173fa10
   - github: RobinWebbers/grisette
     commit: ae4d837886efb2e7838f89271f343d6fa8130388
   - sbv-13.6
