@@ -77,8 +77,7 @@ import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
 import Data.Coerce (Coercible, coerce)
 import Unsafe.Coerce (unsafeCoerce)
-import Prelude hiding (fromInteger, map, toInteger, undefined, zip)
-import Data.Dynamic (Dynamic)
+import Prelude hiding (append, fromInteger, map, toInteger, undefined, zip, Any)
 import Data.IORef
 
 axioms :: PluginAxioms
@@ -396,6 +395,8 @@ axioms =
           ('bindIO, 'bindIOAxiom),
           ('GHC.Internal.Base.bindIO, 'bindIOAxiom),
           ('newIORef, 'newIORefAxiom),
+          ('readIORef, 'readIORefAxiom),
+          ('writeIORef, 'writeIORefAxiom),
           ('GHC.map, 'map),
           ('GHC.zip, 'zip),
           -- ByteString operations.
@@ -426,7 +427,7 @@ data FakeIORef a = FakeIORef
 
 data FakeWorld = FakeWorld
   { time :: Pantomime.Integer
-  , refs :: [Dynamic]
+  , refs :: [GHC.Any]
   }
 
 newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
@@ -1381,11 +1382,53 @@ newIORefAxiom
   . Coercible FakeIO io
   => Coercible FakeIORef ioref
   => a -> io (ioref a)
-newIORefAxiom a = coerce $ FakeIO $ \s ->
-  (# nextWorld s, FakeIORef
-  { refID = time s
-  , value = a
-  } #)
+newIORefAxiom a = 
+  let f :: FakeWorld -> (# FakeWorld, FakeIORef a #)
+      f s = let s' = s { time = time s + 1, refs = append (refs s) [unsafeCoerce a] }
+                ref = FakeIORef { refID = time s, value = a }
+            in (# s', ref #)
+      m :: io (FakeIORef a)
+      m = coerce (FakeIO f)
+  in coerce m
+
+readIORefAxiom
+  :: forall a io ioref
+  . Coercible FakeIO io
+  => Coercible FakeIORef ioref
+  => ioref a -> io a
+readIORefAxiom ref = 
+  let ref' :: FakeIORef a
+      ref' = coerce ref
+      f :: FakeWorld -> (# FakeWorld, a #)
+      f s = let FakeIORef { refID } = ref'
+                idx = fromIntegral (Pantomime.toInteger refID)
+                val = unsafeCoerce (refs s !! idx)
+            in (# nextWorld s, val #)
+  in coerce (FakeIO f)
+
+writeIORefAxiom
+  :: forall a io ioref
+  . Coercible FakeIO io
+  => Coercible FakeIORef ioref
+  => ioref a -> a -> io ()
+writeIORefAxiom ref a = 
+  let ref' :: FakeIORef a
+      ref' = coerce ref
+      f :: FakeWorld -> (# FakeWorld, () #)
+      f s = let FakeIORef { refID } = ref'
+                idx = fromIntegral (Pantomime.toInteger refID)
+                s' = s { refs = updateAt idx (unsafeCoerce a) (refs s) }
+            in (# nextWorld s', () #)
+  in coerce (FakeIO f)
+
+append :: [a] -> [a] -> [a]
+append [] ys = ys
+append (x : xs) ys = x : append xs ys
+
+updateAt :: Int -> a -> [a] -> [a]
+updateAt 0 y (_ : xs) = y : xs
+updateAt n y (x : xs) = x : updateAt (n - 1) y xs
+updateAt _ _ [] = []
 
 map :: (a -> b) -> [a] -> [b]
 map f = do
