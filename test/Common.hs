@@ -5,6 +5,7 @@ module Common
   , todo
   , axioms
   , ioAxioms
+  , ptrAxioms
   , module Test.Hspec
   , module Pantomime
   , module GHC.Exts
@@ -15,9 +16,10 @@ module Common
 import Test.Hspec
 import Test.Hspec.Expectations (expectationFailure)
 
-import Pantomime (Theory (..), pantomime)
 import Pantomime.Base (axioms)
+import Pantomime (Theory (..), pantomime)
 import Pantomime.IO (ioAxioms)
+import Pantomime.Ptr (ptrAxioms)
 import Pantomime.BuiltIn qualified as Pantomime
 
 import GHC.Exts
@@ -29,11 +31,11 @@ todo :: Expectation
 todo = pure ()
 
 -- | Assert that a counterexample was found and print it.
-checkInvalid :: Maybe String -> Expectation
+checkInvalid :: Show a => Maybe a -> Expectation
 checkInvalid = \case
   Just ce -> do
     putStrLn ""
     putStrLn "Counterexample found:"
-    putStrLn ce
+    print ce
     putStrLn ""
   Nothing -> expectationFailure "Expected a counterexample but assertion was valid"

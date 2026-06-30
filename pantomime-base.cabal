@@ -27,6 +27,7 @@ library
   exposed-modules:
       Pantomime.Base
       Pantomime.IO
+      Pantomime.Ptr
   other-modules:
       Paths_pantomime_base
   autogen-modules:
@@ -85,6 +86,7 @@ test-suite pantomime-base-test
       Int8
       IntegerTest
       IOExplain
+      PtrTest
       Word
       Word64
       Word8

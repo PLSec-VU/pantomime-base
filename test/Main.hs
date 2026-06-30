@@ -15,10 +15,11 @@ import qualified BoolTest
 import qualified ByteStringTest
 
 import qualified IOExplain
-
+import qualified PtrTest
 main :: IO ()
 main = hspec $ do
   IOExplain.spec
+  PtrTest.spec
   {-
   Int.spec
 ...

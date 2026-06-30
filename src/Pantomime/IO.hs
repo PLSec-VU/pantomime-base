@@ -2,6 +2,11 @@
 
 module Pantomime.IO
   ( ioAxioms,
+    FakeWorld (..),
+    FakeHeap (..),
+    FakeIO (..),
+    FakeIORef (..),
+    nextWorld,
   )
 where
 
@@ -49,9 +54,16 @@ data FakeIORef a = FakeIORef
   , value :: a
   }
 
+-- | The symbolic heap. Maps pointer id -> byte array. Threaded through
+-- 'FakeWorld' so pointer IO operations (peek/poke/malloc) can mutate it.
+data FakeHeap = FakeHeap
+  { heapNext :: Pantomime.Integer
+  , heapMem :: [(Pantomime.Integer, Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8))]
+  }
 data FakeWorld = FakeWorld
   { time :: Pantomime.Integer
   , refs :: [Any]
+  , heap :: FakeHeap
   }
 
 newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
@@ -69,6 +81,7 @@ unsafePerformIOAxiom m = case coerce m of FakeIO f -> case f newWorld of (# _, a
     newWorld = FakeWorld
       { time = 0
       , refs = []
+      , heap = FakeHeap {heapNext = 0, heapMem = []}
       }
 
 returnIOAxiom
