@@ -276,8 +276,8 @@ axioms =
           ('GHC.orWord8#, 'orWord8#),
           ('GHC.xorWord8#, 'xorWord8#),
           ('GHC.notWord8#, 'notWord8#),
-          -- , ('GHC.uncheckedShiftLWord8#, 'uncheckedShiftLWord8#)
-          -- , ('GHC.uncheckedShiftRLWord8#, 'uncheckedShiftRLWord8#)
+          ('GHC.uncheckedShiftLWord8#, 'uncheckedShiftLWord8#),
+          ('GHC.uncheckedShiftRLWord8#, 'uncheckedShiftRLWord8#),
           ('GHC.eqWord8#, 'eqWord8#),
           ('GHC.neWord8#, 'neWord8#),
           ('GHC.geWord8#, 'geWord8#),
@@ -320,8 +320,8 @@ axioms =
           ('GHC.orWord32#, 'orWord32#),
           ('GHC.xorWord32#, 'xorWord32#),
           ('GHC.notWord32#, 'notWord32#),
-          -- , ('GHC.uncheckedShiftLWord32#, 'uncheckedShiftLWord32#)
-          -- , ('GHC.uncheckedShiftRLWord32#, 'uncheckedShiftRLWord32#)
+          ('GHC.uncheckedShiftLWord32#, 'uncheckedShiftLWord32#),
+          ('GHC.uncheckedShiftRLWord32#, 'uncheckedShiftRLWord32#),
           ('GHC.eqWord32#, 'eqWord32#),
           ('GHC.neWord32#, 'neWord32#),
           ('GHC.geWord32#, 'geWord32#),
@@ -929,6 +929,18 @@ xorWord8# = binaryWord8# Pantomime.bvxor
 notWord8# :: Word8# -> Word8#
 notWord8# x = Pantomime.toWord8# $ Pantomime.bvnot $ Pantomime.fromWord8# x
 
+uncheckedShiftLWord8# :: Word8# -> Int# -> Word8#
+uncheckedShiftLWord8# val idx = do
+  let val' = Pantomime.fromWord8# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @8 $ Pantomime.fromInt# idx
+  Pantomime.toWord8# $ Pantomime.bvshl val' idx'
+
+uncheckedShiftRLWord8# :: Word8# -> Int# -> Word8#
+uncheckedShiftRLWord8# val idx = do
+  let val' = Pantomime.fromWord8# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @8 $ Pantomime.fromInt# idx
+  Pantomime.toWord8# $ Pantomime.bvlshr val' idx'
+
 compareWord8# ::
   (BitVec8 -> BitVec8 -> Pantomime.Bool) ->
   Word8# ->
@@ -1058,6 +1070,18 @@ xorWord32# = binaryWord32# Pantomime.bvxor
 
 notWord32# :: Word32# -> Word32#
 notWord32# x = Pantomime.toWord32# $ Pantomime.bvnot $ Pantomime.fromWord32# x
+
+uncheckedShiftLWord32# :: Word32# -> Int# -> Word32#
+uncheckedShiftLWord32# val idx = do
+  let val' = Pantomime.fromWord32# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @32 $ Pantomime.fromInt# idx
+  Pantomime.toWord32# $ Pantomime.bvshl val' idx'
+
+uncheckedShiftRLWord32# :: Word32# -> Int# -> Word32#
+uncheckedShiftRLWord32# val idx = do
+  let val' = Pantomime.fromWord32# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @32 $ Pantomime.fromInt# idx
+  Pantomime.toWord32# $ Pantomime.bvlshr val' idx'
 
 compareWord32# ::
   (BitVec32 -> BitVec32 -> Pantomime.Bool) ->

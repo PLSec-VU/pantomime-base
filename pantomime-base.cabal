@@ -63,6 +63,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings
   build-depends:
       base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , composition
     , constraints
@@ -77,6 +78,7 @@ test-suite pantomime-base-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Base64Test
       BoolTest
       ByteStringTest
       Common
@@ -126,6 +128,7 @@ test-suite pantomime-base-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings -threaded -rtsopts -with-rtsopts=-N -fplugin=Pantomime
   build-depends:
       base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , composition
     , constraints

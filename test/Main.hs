@@ -15,11 +15,13 @@ import qualified BoolTest
 import qualified ByteStringTest
 
 import qualified IOTest
+import qualified Base64Test
 import qualified PtrTest
 main :: IO ()
 main = hspec $ do
   IOTest.spec
   PtrTest.spec
+  Base64Test.spec
   {-
   Int.spec
 ...

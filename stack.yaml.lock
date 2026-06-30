@@ -62,6 +62,13 @@ packages:
   original:
     hackage: base16-bytestring-1.0.2.0
 - completed:
+    hackage: base64-bytestring-1.2.1.0@sha256:45305ccf8914c66d385b518721472c7b8c858f1986945377f74f85c1e0d49803,2502
+    pantry-tree:
+      sha256: 9e58b1adc5eb2805118c1539d325363d94043370671fb0f13fbe90aaeea3ff44
+      size: 850
+  original:
+    hackage: base64-bytestring-1.2.1.0
+- completed:
     hackage: bytes-0.17.5@sha256:39cd011319dab4feb63f77e6d90f32c2b8fb06e0bbe95875f0258a8c48113b55,2164
     pantry-tree:
       sha256: 5ff13f49267d256103626e59c950f16b20e858261d66b6761c452a901d95d40f

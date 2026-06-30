@@ -54,6 +54,7 @@ dependencies:
   - ghc-internal
   - ghc-prim
   - pantomime
+  - base64-bytestring
   - template-haskell
 
 ghc-options:
