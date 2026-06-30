@@ -86,7 +86,7 @@ test-suite pantomime-base-test
       Int64
       Int8
       IntegerTest
-      IOExplain
+      IOTest
       PtrTest
       Word
       Word64

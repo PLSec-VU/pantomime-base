@@ -1,4 +1,4 @@
-module IOExplain (spec) where
+module IOTest (spec) where
 
 import Common
 import Pantomime.BuiltIn qualified as Pantomime
