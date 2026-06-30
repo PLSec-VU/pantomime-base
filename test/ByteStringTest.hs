@@ -4,11 +4,11 @@ import Common
 import Data.ByteString qualified as BS
 import Pantomime.BuiltIn qualified as Pantomime
 
--- {-# ANN bsSingletonIndex (Theory_disabled_disabled axioms) #-}
+-- {-# ANN bsSingletonIndex (Theory (axioms <> byteStringAxioms)) #-}
 bsSingletonIndex :: Word8 -> Pantomime.Bool
 bsSingletonIndex w = Pantomime.boolean $ BS.index (BS.singleton w) 0 == w
 
--- {-# ANN bsNotNull (Theory_disabled_disabled axioms) #-}
+-- {-# ANN bsNotNull (Theory (axioms <> byteStringAxioms)) #-}
 bsNotNull :: BS.ByteString -> Pantomime.Bool
 bsNotNull bs = Pantomime.boolean $ BS.index bs 0 == 0
 

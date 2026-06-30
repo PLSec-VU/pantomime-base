@@ -12,6 +12,7 @@ where
 
 import Data.ByteString.Internal (mallocByteString)
 import Data.Coerce (Coercible, coerce)
+import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 import GHC.Word (Word8 (..))
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
@@ -57,8 +58,8 @@ ptrAxioms =
       termAxioms =
         [ ('plusPtr, 'plusPtrAxiom),
           ('minusPtr, 'minusPtrAxiom),
-          ('castPtr, 'castPtrAxiom),
           ('mallocByteString, 'mallocByteStringAxiom),
+          ('mallocPlainForeignPtrBytes, 'mallocByteStringAxiom),
           ('withForeignPtr, 'withForeignPtrAxiom),
           ('peekByte, 'peekByteAxiom),
           ('pokeByte, 'pokeByteAxiom)

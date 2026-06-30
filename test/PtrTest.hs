@@ -1,7 +1,7 @@
 module PtrTest (spec) where
 
 import Common
-import Data.ByteString.Internal (mallocByteString)
+import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
 import Pantomime.BuiltIn qualified as Pantomime
@@ -25,13 +25,13 @@ castPtrPreservesOffset p = Pantomime.boolean $
 plusPtrAdditive :: Ptr Word8 -> Int -> Int -> Pantomime.Bool
 plusPtrAdditive p m n = Pantomime.boolean (minusPtr (plusPtr (plusPtr p m) n) p == m + n)
 
--- | mallocByteString then withForeignPtr: the materialized pointer has
+-- | mallocPlainForeignPtrBytes then withForeignPtr: the materialized pointer has
 -- offset 0 relative to itself.
 {-# ANN mallocOffsetZero (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
 mallocOffsetZero :: Pantomime.Bool
 mallocOffsetZero = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> return (minusPtr p p == 0)
 
 -- | malloc + withForeignPtr + plusPtr: minusPtr (plusPtr p n) p == n
@@ -39,7 +39,7 @@ mallocOffsetZero = Pantomime.boolean $
 mallocPlusPtrInside :: Int -> Pantomime.Bool
 mallocPlusPtrInside n = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> return (minusPtr (plusPtr p n) p == n)
 
 -- | poke then peek at the same offset returns the written byte.
@@ -47,7 +47,7 @@ mallocPlusPtrInside n = Pantomime.boolean $
 pokePeekRoundTrip :: Word8 -> Pantomime.Bool
 pokePeekRoundTrip v = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> do
       pokeByte p v
       r <- peekByte p
@@ -58,7 +58,7 @@ pokePeekRoundTrip v = Pantomime.boolean $
 mallocPeekZero :: Pantomime.Bool
 mallocPeekZero = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> do
       r <- peekByte p
       return (r == 0)
@@ -68,7 +68,7 @@ mallocPeekZero = Pantomime.boolean $
 pokePeekAtOffset :: Int -> Word8 -> Pantomime.Bool
 pokePeekAtOffset n v = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 16 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 16 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> do
       pokeByte (plusPtr p n) v
       r <- peekByte (plusPtr p n)
@@ -79,7 +79,7 @@ pokePeekAtOffset n v = Pantomime.boolean $
 pokePeekDistinctOffsets :: Word8 -> Pantomime.Bool
 pokePeekDistinctOffsets v = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 16 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 16 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> do
       pokeByte p v
       r <- peekByte (plusPtr p 1)
@@ -90,7 +90,7 @@ pokePeekDistinctOffsets v = Pantomime.boolean $
 pokeOverwrite :: Word8 -> Word8 -> Pantomime.Bool
 pokeOverwrite v1 v2 = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    fp <- mallocPlainForeignPtrBytes 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> do
       pokeByte p v1
       pokeByte p v2
@@ -105,7 +105,7 @@ spec = describe "Pointer axioms" $ do
     $(pantomime 'castPtrPreservesOffset) `shouldBe` Nothing
   it "plusPtr is additive" $
     $(pantomime 'plusPtrAdditive) `shouldBe` Nothing
-  it "mallocByteString + withForeignPtr gives offset 0" $
+  it "mallocPlainForeignPtrBytes + withForeignPtr gives offset 0" $
     $(pantomime 'mallocOffsetZero) `shouldBe` Nothing
   it "plusPtr inside withForeignPtr round-trips" $
     $(pantomime 'mallocPlusPtrInside) `shouldBe` Nothing
