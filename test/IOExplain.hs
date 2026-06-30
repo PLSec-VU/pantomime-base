@@ -12,7 +12,7 @@ ioRefPure x = do
   writeIORef ref x
   readIORef ref
 
-{-# ANN testIO (Theory axioms) #-}
+{-# ANN testIO (Theory (axioms <> ioAxioms)) #-}
 testIO :: Int -> Pantomime.Bool
 testIO x = Pantomime.boolean (x == unsafePerformIO (ioRefPure x))
 

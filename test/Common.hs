@@ -4,6 +4,7 @@ module Common
   ( checkInvalid
   , todo
   , axioms
+  , ioAxioms
   , module Test.Hspec
   , module Pantomime
   , module GHC.Exts
@@ -16,6 +17,7 @@ import Test.Hspec.Expectations (expectationFailure)
 
 import Pantomime (Theory (..), pantomime)
 import Pantomime.Base (axioms)
+import Pantomime.IO (ioAxioms)
 import Pantomime.BuiltIn qualified as Pantomime
 
 import GHC.Exts
