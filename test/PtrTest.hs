@@ -5,6 +5,7 @@ import Data.ByteString.Internal (mallocByteString)
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
 import Pantomime.BuiltIn qualified as Pantomime
+import Pantomime.Ptr (peekByte, pokeByte)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.Word (Word8, Word16)
 
@@ -41,6 +42,60 @@ mallocPlusPtrInside n = Pantomime.boolean $
     fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
     withForeignPtr fp $ \p -> return (minusPtr (plusPtr p n) p == n)
 
+-- | poke then peek at the same offset returns the written byte.
+{-# ANN pokePeekRoundTrip (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekRoundTrip :: Word8 -> Pantomime.Bool
+pokePeekRoundTrip v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    withForeignPtr fp $ \p -> do
+      pokeByte p v
+      r <- peekByte p
+      return (r == v)
+
+-- | peek at a freshly malloc'd buffer returns 0 (zero-initialization).
+{-# ANN mallocPeekZero (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+mallocPeekZero :: Pantomime.Bool
+mallocPeekZero = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    withForeignPtr fp $ \p -> do
+      r <- peekByte p
+      return (r == 0)
+
+-- | poke at offset n, peek at the same offset: returns the written byte.
+{-# ANN pokePeekAtOffset (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekAtOffset :: Int -> Word8 -> Pantomime.Bool
+pokePeekAtOffset n v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteString 16 :: IO (ForeignPtr Word8)
+    withForeignPtr fp $ \p -> do
+      pokeByte (plusPtr p n) v
+      r <- peekByte (plusPtr p n)
+      return (r == v)
+
+-- | poke at offset 0, peek at offset 1: does NOT see the write (distinct cells).
+{-# ANN pokePeekDistinctOffsets (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekDistinctOffsets :: Word8 -> Pantomime.Bool
+pokePeekDistinctOffsets v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteString 16 :: IO (ForeignPtr Word8)
+    withForeignPtr fp $ \p -> do
+      pokeByte p v
+      r <- peekByte (plusPtr p 1)
+      return (r == 0)
+
+-- | poke overwrites: poke v1, poke v2, peek returns v2.
+{-# ANN pokeOverwrite (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokeOverwrite :: Word8 -> Word8 -> Pantomime.Bool
+pokeOverwrite v1 v2 = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteString 8 :: IO (ForeignPtr Word8)
+    withForeignPtr fp $ \p -> do
+      pokeByte p v1
+      pokeByte p v2
+      r <- peekByte p
+      return (r == v2)
 
 spec :: Spec
 spec = describe "Pointer axioms" $ do
@@ -54,3 +109,13 @@ spec = describe "Pointer axioms" $ do
     $(pantomime 'mallocOffsetZero) `shouldBe` Nothing
   it "plusPtr inside withForeignPtr round-trips" $
     $(pantomime 'mallocPlusPtrInside) `shouldBe` Nothing
+  it "poke then peek at same offset round-trips" $
+    $(pantomime 'pokePeekRoundTrip) `shouldBe` Nothing
+  it "peek at fresh malloc returns 0" $
+    $(pantomime 'mallocPeekZero) `shouldBe` Nothing
+  it "poke/peek at symbolic offset round-trips" $
+    $(pantomime 'pokePeekAtOffset) `shouldBe` Nothing
+  it "poke at 0 does not affect peek at 1" $
+    $(pantomime 'pokePeekDistinctOffsets) `shouldBe` Nothing
+  it "poke overwrites previous value" $
+    $(pantomime 'pokeOverwrite) `shouldBe` Nothing

@@ -56,9 +56,11 @@ data FakeIORef a = FakeIORef
 
 -- | The symbolic heap. Maps pointer id -> byte array. Threaded through
 -- 'FakeWorld' so pointer IO operations (peek/poke/malloc) can mutate it.
+-- Represented as a symbolic array (not an association list) so that
+-- symbolic pointer ids resolve correctly in the SMT backend.
 data FakeHeap = FakeHeap
   { heapNext :: Pantomime.Integer
-  , heapMem :: [(Pantomime.Integer, Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8))]
+  , heapMem :: Pantomime.Array Pantomime.Integer (Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8))
   }
 data FakeWorld = FakeWorld
   { time :: Pantomime.Integer
@@ -78,10 +80,13 @@ unsafePerformIOAxiom
   -> a
 unsafePerformIOAxiom m = case coerce m of FakeIO f -> case f newWorld of (# _, a #) -> a
   where
+    zeroByte = 0 :: Pantomime.BitVec 8
+    zeroByteArray = Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zeroByte
+    zeroHeapArray = Pantomime.aconst @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) zeroByteArray
     newWorld = FakeWorld
       { time = 0
       , refs = []
-      , heap = FakeHeap {heapNext = 0, heapMem = []}
+      , heap = FakeHeap {heapNext = 0, heapMem = zeroHeapArray}
       }
 
 returnIOAxiom

@@ -5,14 +5,17 @@ module Pantomime.Ptr
   ( ptrAxioms,
     FakePtr (..),
     FakeForeignPtr (..),
+    peekByte,
+    pokeByte,
   )
 where
 
-import GHC.Base (Int (I#))
 import Data.ByteString.Internal (mallocByteString)
 import Data.Coerce (Coercible, coerce)
+import GHC.Word (Word8 (..))
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
+import GHC.Base (Int (I#))
 import GHC.Exts (IsList (..))
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
@@ -56,7 +59,9 @@ ptrAxioms =
           ('minusPtr, 'minusPtrAxiom),
           ('castPtr, 'castPtrAxiom),
           ('mallocByteString, 'mallocByteStringAxiom),
-          ('withForeignPtr, 'withForeignPtrAxiom)
+          ('withForeignPtr, 'withForeignPtrAxiom),
+          ('peekByte, 'peekByteAxiom),
+          ('pokeByte, 'pokeByteAxiom)
         ]
     }
 
@@ -114,7 +119,7 @@ mallocByteStringAxiom n =
             newId = heapNext h
             zeroByte = 0 :: Pantomime.BitVec 8
             arr = Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zeroByte
-            h' = h {heapNext = newId + 1, heapMem = (newId, arr) : heapMem h}
+            h' = h {heapNext = newId + 1, heapMem = Pantomime.astore @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) newId arr}
             s' = s {heap = h'}
             fptr = FakeForeignPtr
               { fptrId = Pantomime.i2bv @Pantomime.PlatformWordSize newId
@@ -144,20 +149,72 @@ withForeignPtrAxiom fp k =
         in g s
   in coerce (FakeIO f)
 
--- | Lookup the byte array for a given pointer id. Falls back to a zero array
--- if not found (shouldn't happen with well-scoped allocations).
-lookupHeap :: FakeHeap -> Pantomime.Integer -> Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
-lookupHeap h i = case lookup i (heapMem h) of
-  Just arr -> arr
-  Nothing -> Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) (0 :: Pantomime.BitVec 8)
+-- | Monomorphic Word8 peek wrapper, axiomatizable without a 'Storable'
+-- constraint. Mirrors @peek8 = peek@ from base64-bytestring.
+{-# NOINLINE peekByte #-}
+peekByte :: Ptr Word8 -> IO Word8
+peekByte = error "peekByte: axiom not resolved"
 
--- | Update (or insert) the array for a given pointer id in the heap memory list.
-updateHeap
-  :: [(Pantomime.Integer, Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8))]
+-- | Monomorphic Word8 poke wrapper, axiomatizable without a 'Storable'
+-- constraint. Mirrors @poke8 = poke@ from base64-bytestring.
+{-# NOINLINE pokeByte #-}
+pokeByte :: Ptr Word8 -> Word8 -> IO ()
+pokeByte = error "pokeByte: axiom not resolved"
+
+-- | peekByte :: Ptr Word8 -> IO Word8
+-- Read a single byte from the heap at the pointer's offset.
+peekByteAxiom
+  :: forall ptr io
+   . Coercible FakePtr ptr
+  => Coercible FakeIO io
+  => ptr Word8
+  -> io Word8
+peekByteAxiom p =
+  let f :: FakeWorld -> (# FakeWorld, Word8 #)
+      f s =
+        let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
+            arr = lookupHeap (heap s) (Pantomime.bvu2i ptrId)
+            val = Pantomime.aselect @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff)
+        in (# nextWorld s, W8# (Pantomime.toWord8# val) #)
+      m :: io Word8
+      m = coerce (FakeIO f)
+  in coerce m
+
+-- | pokeByte :: Ptr Word8 -> Word8 -> IO ()
+pokeByteAxiom
+  :: forall ptr io
+   . Coercible FakePtr ptr
+  => Coercible FakeIO io
+  => ptr Word8
+  -> Word8
+  -> io ()
+pokeByteAxiom p (W8# w#) =
+  let f :: FakeWorld -> (# FakeWorld, () #)
+      f s =
+        let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
+            h = heap s
+            arr = lookupHeap h (Pantomime.bvu2i ptrId)
+            arr' = Pantomime.astore @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff) (Pantomime.fromWord8# w#)
+            h' = updateHeap h (Pantomime.bvu2i ptrId) arr'
+            s' = s {heap = h'}
+        in (# nextWorld s', () #)
+      m :: io ()
+      m = coerce (FakeIO f)
+  in coerce m
+
+-- | Lookup the byte array for a given pointer id in the heap. Since the
+-- heap is a symbolic array, this is a direct 'aselect'.
+lookupHeap
+  :: FakeHeap
   -> Pantomime.Integer
   -> Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
-  -> [(Pantomime.Integer, Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8))]
-updateHeap [] i arr = [(i, arr)]
-updateHeap ((j, a) : rest) i arr
-  | j == i = (i, arr) : rest
-  | otherwise = (j, a) : updateHeap rest i arr
+lookupHeap h i = Pantomime.aselect @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) i
+
+-- | Update the byte array for a given pointer id in the heap. Since the
+-- heap is a symbolic array, this is a direct 'astore'.
+updateHeap
+  :: FakeHeap
+  -> Pantomime.Integer
+  -> Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
+  -> FakeHeap
+updateHeap h i arr = h {heapMem = Pantomime.astore @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) i arr}
