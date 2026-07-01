@@ -14,8 +14,7 @@ module Pantomime.Ptr
     pokeByteAxiom,
   )
 where
-import Data.ByteString.Base64.Internal (peek8, poke8)
-import Data.ByteString.Internal (mallocByteString)
+import Data.ByteString.Base64.Internal (peek8, poke8, mallocByteStringN, withForeignPtrN)
 import Data.Coerce (Coercible, coerce)
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 import GHC.Word (Word8 (..))
@@ -63,12 +62,10 @@ ptrAxioms =
       termAxioms =
         [ ('plusPtr, 'plusPtrAxiom),
           ('minusPtr, 'minusPtrAxiom),
-          ('mallocByteString, 'mallocByteStringAxiom),
+          ('mallocByteStringN, 'mallocByteStringAxiom),
           ('mallocPlainForeignPtrBytes, 'mallocByteStringAxiom),
-          ('mallocForeignPtrBytes, 'mallocByteStringAxiom),
+          ('withForeignPtrN, 'withForeignPtrAxiom),
           ('withForeignPtr, 'withForeignPtrAxiom),
-          ('peekByte, 'peekByteAxiom),
-          ('pokeByte, 'pokeByteAxiom),
           ('peek8, 'peekByteAxiom),
           ('poke8, 'pokeByteAxiom)
         ]

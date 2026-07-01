@@ -59,10 +59,7 @@ byteStringAxioms =
           ('alphabet, 'alphabetAxiom),
           ('mallocByteStringN, 'mallocByteStringAxiom),
           ('runIO, 'unsafePerformIOAxiom),
-          ('plusPtrN, 'plusPtrAxiom),
-          ('withForeignPtrN, 'withForeignPtrAxiom),
-          ('mkEncodeTable, 'mkEncodeTableAxiom),
-          ('encodeWith, 'encodeWithAxiom)
+          ('mkEncodeTable, 'mkEncodeTableAxiom)
         ]
     }
 
@@ -125,6 +122,10 @@ alphabetAxiom =
 -- ForeignPtr (id=0) and a fresh ForeignPtr (id=1) for the encode table.
 -- The 'complete' branch of encode only uses the alphabet pointer (via
 -- 'aidx'), not the encode table.
+{-# NOINLINE runIO #-}
+runIO :: IO a -> a
+runIO = unsafePerformIO
+
 {-# NOINLINE mallocByteStringN #-}
 mallocByteStringN :: Int -> IO (ForeignPtr a)
 mallocByteStringN = mallocByteString
@@ -136,59 +137,3 @@ mkEncodeTableAxiom _bs =
     (runIO (mallocByteStringN 8192))
 
 
--- | encodeWith :: Padding -> EncodeTable -> ByteString -> ByteString
--- Axiomatized to replicate the 'complete' branch of the actual encodeWith
--- implementation. Uses withBS, peek8, poke8, mkBS (all axiomatized via
--- term axioms). Handles single-byte and two-byte inputs (non-recursive branch).
-{-# NOINLINE runIO #-}
-runIO :: IO a -> a
-runIO = unsafePerformIO
-
-{-# NOINLINE plusPtrN #-}
-plusPtrN :: Ptr a -> Int -> Ptr b
-plusPtrN = plusPtr
-
-{-# NOINLINE withForeignPtrN #-}
-withForeignPtrN :: ForeignPtr a -> (Ptr a -> IO b) -> IO b
-withForeignPtrN = withForeignPtr
-
-encodeWithAxiom :: Padding -> EncodeTable -> ByteString -> ByteString
-encodeWithAxiom padding (ET alfaFP _encodeTableFP) bs =
-  withBS bs $ \sptr slen -> do
-    aptr <- withForeignPtrN alfaFP $ \p -> return (p :: Ptr Word8)
-    let dfp = runIO (mallocByteStringN 4 :: IO (ForeignPtr Word8))
-    withForeignPtrN dfp $ \dptr -> do
-      let dlen = 4
-          equals = 0x3d :: Word8
-          doPad = padding == Padded
-          aidxAlpha n = peek8 (aptr `plusPtrN` n)
-      if slen > 0
-        then do
-          aByte <- peek8 sptr
-          let aIdx = fromIntegral ((aByte .&. 0xfc) `shiftR` 2) :: Int
-              bIdx = fromIntegral ((aByte .&. 0x03) `shiftL` 4) :: Int
-          aChar <- aidxAlpha aIdx
-          poke8 dptr aChar
-          let twoMore = slen == 2
-          if twoMore
-            then do
-              bByte <- peek8 (sptr `plusPtrN` 1)
-              let b' = fromIntegral ((fromIntegral (bByte .&. 0xf0) `shiftR` 4 :: Int) .|. bIdx) :: Int
-                  cIdx = fromIntegral ((bByte .&. 0x0f) `shiftL` 2) :: Int
-              bChar <- aidxAlpha b'
-              cChar <- aidxAlpha cIdx
-              poke8 (dptr `plusPtrN` 1) bChar
-              poke8 (dptr `plusPtrN` 2) cChar
-              if doPad
-                then do poke8 (dptr `plusPtrN` 3) equals; return (mkBS dfp dlen)
-                else return (mkBS dfp (dlen - 1))
-            else do
-              bChar <- aidxAlpha bIdx
-              poke8 (dptr `plusPtrN` 1) bChar
-              if doPad
-                then do
-                  poke8 (dptr `plusPtrN` 2) equals
-                  poke8 (dptr `plusPtrN` 3) equals
-                  return (mkBS dfp dlen)
-                else return (mkBS dfp (dlen - 2))
-        else return (mkBS dfp 0)

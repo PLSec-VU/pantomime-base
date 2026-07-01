@@ -135,17 +135,16 @@ axioms =
           ('GHC.subIntC#, 'subIntC#),
           -- , ('GHC.timesInt2#, 'timesInt2#)
           -- , ('GHC.mulIntMayOflo#, 'mulIntMayOflo#)
-          -- , ('GHC.quotInt#, 'quotInt#)
-          -- , ('GHC.remInt#, 'remInt#)
-          -- , ('GHC.quotRemInt#, 'quotRemInt#)
+          ('GHC.quotInt#, 'quotInt#),
+          ('GHC.remInt#, 'remInt#),
+          ('GHC.uncheckedIShiftL#, 'uncheckedIShiftL#),
+          ('GHC.uncheckedIShiftRA#, 'uncheckedIShiftRA#),
+          ('GHC.uncheckedIShiftRL#, 'uncheckedIShiftRL#),
           ('GHC.andI#, 'andI#),
           ('GHC.orI#, 'orI#),
           ('GHC.xorI#, 'xorI#),
           ('GHC.notI#, 'notI#),
           ('GHC.negateInt#, 'negateInt#),
-          -- , ('GHC.uncheckedIShiftL#, 'uncheckedIShiftL#)
-          -- , ('GHC.uncheckedIShiftRA#, 'uncheckedIShiftRA#)
-          -- , ('GHC.uncheckedIShiftRL#, 'uncheckedIShiftRL#)
           ('(GHC.==#), '(==#)),
           ('(GHC./=#), '(/=#)),
           ('(GHC.>=#), '(>=#)),
@@ -447,11 +446,19 @@ binaryInt# f lhs rhs = do
 (*#) :: Int# -> Int# -> Int#
 (*#) = binaryInt# (*)
 
+quotInt# :: Int# -> Int# -> Int#
+quotInt# = binaryInt# Pantomime.bvsdiv
+
+remInt# :: Int# -> Int# -> Int#
+remInt# = binaryInt# Pantomime.bvsrem
+
 binaryIntC# ::
   (forall n. (KnownNat n) => Pantomime.BitVec n -> Pantomime.BitVec n -> Pantomime.BitVec n) ->
   Int# ->
   Int# ->
   (# Int#, Int# #)
+
+
 binaryIntC# f lhs rhs = do
   let project' x =
         Pantomime.bvzext @_ @(Pantomime.PlatformWordSize + 1) $
@@ -470,6 +477,24 @@ addIntC# = binaryIntC# Pantomime.bvadd
 
 subIntC# :: Int# -> Int# -> (# Int#, Int# #)
 subIntC# = binaryIntC# \lhs rhs -> Pantomime.bvadd lhs (Pantomime.bvneg rhs)
+
+uncheckedIShiftL# :: Int# -> Int# -> Int#
+uncheckedIShiftL# val idx = do
+  let val' = Pantomime.fromInt# val
+      idx' = Pantomime.fromInt# idx
+  Pantomime.toInt# $ Pantomime.bvshl val' idx'
+
+uncheckedIShiftRA# :: Int# -> Int# -> Int#
+uncheckedIShiftRA# val idx = do
+  let val' = Pantomime.fromInt# val
+      idx' = Pantomime.fromInt# idx
+  Pantomime.toInt# $ Pantomime.bvashr val' idx'
+
+uncheckedIShiftRL# :: Int# -> Int# -> Int#
+uncheckedIShiftRL# val idx = do
+  let val' = Pantomime.fromInt# val
+      idx' = Pantomime.fromInt# idx
+  Pantomime.toInt# $ Pantomime.bvlshr val' idx'
 
 andI# :: Int# -> Int# -> Int#
 andI# = binaryInt# Pantomime.bvand
