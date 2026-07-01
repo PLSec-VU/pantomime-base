@@ -17,13 +17,14 @@ import qualified ByteStringTest
 import qualified IOTest
 import qualified Base64Test
 import qualified PtrTest
+import qualified TestEncodeAnn
 main :: IO ()
 main = hspec $ do
   IOTest.spec
   PtrTest.spec
   Base64Test.spec
+  TestEncodeAnn.spec
   {-
   Int.spec
-...
   ByteStringTest.spec
   -}

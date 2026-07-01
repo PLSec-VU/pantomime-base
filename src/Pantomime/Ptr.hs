@@ -5,16 +5,21 @@ module Pantomime.Ptr
   ( ptrAxioms,
     FakePtr (..),
     FakeForeignPtr (..),
+    mallocByteStringAxiom,
+    withForeignPtrAxiom,
+    plusPtrAxiom,
     peekByte,
     pokeByte,
+    peekByteAxiom,
+    pokeByteAxiom,
   )
 where
-
+import Data.ByteString.Base64.Internal (peek8, poke8)
 import Data.ByteString.Internal (mallocByteString)
 import Data.Coerce (Coercible, coerce)
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 import GHC.Word (Word8 (..))
-import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
+import Foreign.ForeignPtr (ForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
 import GHC.Base (Int (I#))
 import GHC.Exts (IsList (..))
@@ -60,9 +65,12 @@ ptrAxioms =
           ('minusPtr, 'minusPtrAxiom),
           ('mallocByteString, 'mallocByteStringAxiom),
           ('mallocPlainForeignPtrBytes, 'mallocByteStringAxiom),
+          ('mallocForeignPtrBytes, 'mallocByteStringAxiom),
           ('withForeignPtr, 'withForeignPtrAxiom),
           ('peekByte, 'peekByteAxiom),
-          ('pokeByte, 'pokeByteAxiom)
+          ('pokeByte, 'pokeByteAxiom),
+          ('peek8, 'peekByteAxiom),
+          ('poke8, 'pokeByteAxiom)
         ]
     }
 

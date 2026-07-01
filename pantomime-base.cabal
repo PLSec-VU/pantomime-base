@@ -90,6 +90,7 @@ test-suite pantomime-base-test
       IntegerTest
       IOTest
       PtrTest
+      TestEncodeAnn
       Word
       Word64
       Word8

@@ -1,3 +1,5 @@
+{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE UnboxedTuples #-}
 
 module Pantomime.IO
@@ -6,7 +8,9 @@ module Pantomime.IO
     FakeHeap (..),
     FakeIO (..),
     FakeIORef (..),
+    FakeState (..),
     nextWorld,
+    unsafePerformIOAxiom,
   )
 where
 
@@ -14,6 +18,8 @@ import Data.Coerce (Coercible, coerce)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import GHC.Base (Any, RealWorld, bindIO, returnIO)
 import GHC.Exts (IsList (..))
+import GHC.Prim (State#)
+import GHC.Internal.Base (RuntimeRep)
 import GHC.Internal.Base qualified as GHC.Internal.Base
 import GHC.Internal.IO qualified as GHC.Internal.IO
 import GHC.Internal.IO.Unsafe qualified as GHC.Internal.IO.Unsafe
@@ -30,6 +36,7 @@ ioAxioms =
     { typeAxioms =
         fromList
           [ (''RealWorld, ''FakeWorld),
+            (''State#, ''FakeState),
             (''IO, ''FakeIO),
             (''IORef, ''FakeIORef)
           ],
@@ -69,6 +76,12 @@ data FakeWorld = FakeWorld
   }
 
 newtype FakeIO a = FakeIO (FakeWorld -> (# FakeWorld, a #))
+
+-- | Symbolic representation of 'State# s'. The phantom type argument
+-- preserves the kind structure of 'State#'. The actual state is always
+-- a 'FakeWorld' — the phantom just keeps the kinds consistent.
+type role FakeState phantom
+data FakeState (s :: RuntimeRep) = FakeState FakeWorld
 
 nextWorld :: FakeWorld -> FakeWorld
 nextWorld wrld@(FakeWorld {..}) = wrld {time = time + 1}
@@ -149,6 +162,8 @@ writeIORefAxiom ref a =
                 s' = s { refs = updateAt idx (unsafeCoerce a) (refs s) }
             in (# nextWorld s', () #)
   in coerce (FakeIO f)
+
+
 
 append :: [a] -> [a] -> [a]
 append [] ys = ys

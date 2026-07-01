@@ -5,17 +5,6 @@
 
 packages:
 - completed:
-    name: pantomime
-    pantry-tree:
-      sha256: 3381c2b30a4928361f99a2eebfd419e841f8c6a9cb7d58959bb190d8c52d261f
-      size: 2949
-    sha256: ddcfb6e720e5cca18b76ab61512d78c83def4fc098674ac0305ac87d1b5f15ef
-    size: 90027
-    url: https://github.com/PLSec-VU/pantomime/archive/e1fe436420b7cde585c1b2caa09883c71173fa10.tar.gz
-    version: 0.1.0.0
-  original:
-    url: https://github.com/PLSec-VU/pantomime/archive/e1fe436420b7cde585c1b2caa09883c71173fa10.tar.gz
-- completed:
     name: grisette
     pantry-tree:
       sha256: ac978bcc6a35ee65677dbe41373c2799759457dedee85c6888a2cb7b362a2068
@@ -61,13 +50,6 @@ packages:
       size: 595
   original:
     hackage: base16-bytestring-1.0.2.0
-- completed:
-    hackage: base64-bytestring-1.2.1.0@sha256:45305ccf8914c66d385b518721472c7b8c858f1986945377f74f85c1e0d49803,2502
-    pantry-tree:
-      sha256: 9e58b1adc5eb2805118c1539d325363d94043370671fb0f13fbe90aaeea3ff44
-      size: 850
-  original:
-    hackage: base64-bytestring-1.2.1.0
 - completed:
     hackage: bytes-0.17.5@sha256:39cd011319dab4feb63f77e6d90f32c2b8fb06e0bbe95875f0258a8c48113b55,2164
     pantry-tree:

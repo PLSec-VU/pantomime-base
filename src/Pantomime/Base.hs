@@ -80,7 +80,8 @@ axioms =
             (''Word8#, ''BitVec8),
             (''Word16#, ''BitVec16),
             (''Word32#, ''BitVec32),
-            (''Word64#, ''BitVec64)
+          (''Word64#, ''BitVec64),
+          (''Addr#, ''BitVecPW)
           ],
       termAxioms =
         -- Pantomime embed operations.
