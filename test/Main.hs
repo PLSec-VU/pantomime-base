@@ -18,6 +18,7 @@ import qualified IOTest
 import qualified Base64Test
 import qualified PtrTest
 import qualified IProuteTest
+import qualified ContainersTest
 
 main :: IO ()
 main = hspec $ do
@@ -25,6 +26,7 @@ main = hspec $ do
   PtrTest.spec
   Base64Test.spec
   IProuteTest.spec
+  ContainersTest.spec
   BoolTest.spec
   IntegerTest.spec
   Int.spec

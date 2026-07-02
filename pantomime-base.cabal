@@ -82,6 +82,7 @@ test-suite pantomime-base-test
       BoolTest
       ByteStringTest
       Common
+      ContainersTest
       Int
       Int16
       Int32
@@ -134,6 +135,7 @@ test-suite pantomime-base-test
     , bytestring
     , composition
     , constraints
+    , containers
     , ghc-bignum
     , ghc-internal
     , ghc-prim

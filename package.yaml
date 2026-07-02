@@ -93,3 +93,4 @@ tests:
       - hspec-expectations
       - ghc-prim
       - iproute
+      - containers

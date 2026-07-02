@@ -32,6 +32,7 @@ import GHC.Base
   )
 import GHC.Base qualified as GHC
 import GHC.Exts (IsList (..))
+import GHC.Magic (lazy)
 import GHC.Num (Integer (..), Natural (..))
 import GHC.Num qualified as GHC
   ( integerFromBigNat#,
@@ -372,6 +373,7 @@ axioms =
           ('GHC.naturalAdd, 'naturalAdd),
           ('GHC.naturalSubThrow, 'naturalSubThrow),
           ('GHC.noinline, 'noinline),
+          ('lazy, 'lazyId),
           ('GHC.error, 'errorAxiom),
           ('GHC.throw, 'throw),
           ('GHC.patError, 'patError'),
@@ -1380,6 +1382,10 @@ naturalSubThrow (NB x) (NB y) = case GHC.bigNatSub x y of
 
 noinline :: a -> a
 noinline = id
+
+lazyId :: a -> a
+lazyId = id
+
 
 -- FIXME: This is not actually the implementation for 'undefined'.
 undefined :: a
