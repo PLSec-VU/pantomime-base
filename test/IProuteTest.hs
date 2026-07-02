@@ -4,8 +4,9 @@ module IProuteTest (spec) where
 
 import Common
 import Data.Bits
-import Data.IP (IPv4, AddrRange, Addr (..), makeAddrRange, isMatchedTo, (>:>), toIPv4w)
-import Data.Word (Word32)
+import Data.IP (IPv4, IPv6, AddrRange, Addr (..), makeAddrRange, isMatchedTo, (>:>),
+                toIPv4w, toIPv6w, ipv4ToIPv6, ipv4RangeToIPv6)
+import Data.Word (Word32, Word8)
 import Pantomime.BuiltIn qualified as Pantomime
 
 -- | Internal helper from Data.IP.Addr, reproduced verbatim (not part of public API).
@@ -46,6 +47,38 @@ subnetTransitive w1 l1 w2 l2 w3 l3 = Pantomime.boolean $
         r3 = makeAddrRange (toIPv4w w3) l3
     in  not validLens || not (r1 >:> r2 && r2 >:> r3) || r1 >:> r3
 
+-- | Any IPv6 address is contained in the subnet it generates.
+-- Using Word8 for len avoids the Int minBound overflow that causes shiftR
+-- to receive a negative shift amount inside maskIPv6/shiftR128.
+{-# ANN addrInOwnRangeIPv6 (Theory axioms) #-}
+addrInOwnRangeIPv6 :: Word32 -> Word32 -> Word32 -> Word32 -> Word8 -> Pantomime.Bool
+addrInOwnRangeIPv6 w1 w2 w3 w4 len8 = Pantomime.boolean $
+    let a = toIPv6w (w1, w2, w3, w4)
+        len = fromIntegral len8
+    in  a `isMatchedTo` makeAddrRange a len
+
+-- | IPv6 subnet containment is reflexive for all mask lengths in [0, 255].
+-- Using Word8 avoids the Int minBound overflow that causes shiftR to receive
+-- a negative shift amount inside maskIPv6/shiftR128.
+{-# ANN subnetReflexiveIPv6 (Theory axioms) #-}
+subnetReflexiveIPv6 :: Word32 -> Word32 -> Word32 -> Word32 -> Word8 -> Pantomime.Bool
+subnetReflexiveIPv6 w1 w2 w3 w4 len8 = Pantomime.boolean $
+    let len = fromIntegral len8
+        r = makeAddrRange (toIPv6w (w1, w2, w3, w4)) len
+    in  r >:> r
+
+-- | IPv4-mapped IPv6 containment: if an IPv4 address is in a range,
+-- its IPv4-mapped IPv6 form is in the lifted IPv6 range.
+-- Using Word8 for len avoids Int minBound overflow in maskIPv4/maskIPv6.
+{-# ANN ipv4MappedContainment (Theory axioms) #-}
+ipv4MappedContainment :: Word32 -> Word8 -> Pantomime.Bool
+ipv4MappedContainment w len8 = Pantomime.boolean $
+    let len = fromIntegral len8
+        a = toIPv4w w
+        r = makeAddrRange a len
+        validLen = len <= 32
+    in  not validLen || ipv4ToIPv6 a `isMatchedTo` ipv4RangeToIPv6 r
+
 spec :: Spec
 spec = describe "iproute address arithmetic" $ do
   describe "IPv4" $ do
@@ -57,3 +90,18 @@ spec = describe "iproute address arithmetic" $ do
       $(pantomime 'subnetReflexive) `shouldBe` Nothing
     it "subnet containment is transitive" $
       $(pantomime 'subnetTransitive) `shouldBe` Nothing
+  describe "IPv6" $ do
+    it "makeAddrRange always contains its own address" $
+      $(pantomime 'addrInOwnRangeIPv6) `shouldBe` Nothing
+    it "subnet containment is reflexive" $
+      $(pantomime 'subnetReflexiveIPv6) `shouldBe` Nothing
+    it "IPv4-mapped address is in its lifted IPv6 range" $
+      $(pantomime 'ipv4MappedContainment) `shouldBe` Nothing
+  describe "counterexample display smoke test" $ do
+    it "w==0 && b==0 is falsifiable (counterexample should show Word32/Word8 values)" $
+      $(pantomime 'badProp) `shouldNotBe` Nothing
+
+-- Deliberately false: used to smoke-test counterexample reporting.
+{-# ANN badProp (Theory axioms) #-}
+badProp :: Word32 -> Word8 -> Pantomime.Bool
+badProp w b = Pantomime.boolean (w == 0 && b == 0)
