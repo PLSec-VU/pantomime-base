@@ -25,7 +25,13 @@ main = hspec $ do
   PtrTest.spec
   Base64Test.spec
   IProuteTest.spec
-  {-
+  BoolTest.spec
+  IntegerTest.spec
   Int.spec
-  ByteStringTest.spec
-  -}
+  Int8.spec
+  Int16.spec
+  Int32.spec
+  Int64.spec
+  Word.spec
+  Word8.spec
+  Word64.spec
