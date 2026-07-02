@@ -6,11 +6,7 @@ import Common
 import Data.Bits ((.&.), (.|.), shiftL, shiftR)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.ByteString.Base64.Internal (peek8, poke8)
-import Data.Word (Word8, Word32)
-import Foreign.ForeignPtr (withForeignPtr)
-import Foreign.Ptr (plusPtr)
-import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
+import Data.ByteString.Base64.Internal (peek8, poke8, mallocByteStringN, withForeignPtrN, plusPtrN)
 import Pantomime.BuiltIn qualified as Pantomime
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -35,10 +31,10 @@ completeArithmetic = Pantomime.boolean $
 alphabetAccessPattern :: Word8 -> Int -> Pantomime.Bool
 alphabetAccessPattern val n = Pantomime.boolean $
   unsafePerformIO $ do
-    fp <- mallocPlainForeignPtrBytes 64
-    withForeignPtr fp $ \aptr -> do
-      poke8 (aptr `plusPtr` n) val
-      result <- peek8 (aptr `plusPtr` n)
+    fp <- mallocByteStringN 64
+    withForeignPtrN fp $ \aptr -> do
+      poke8 (aptr `plusPtrN` n) val
+      result <- peek8 (aptr `plusPtrN` n)
       return (result == val)
 
 -- | Verify the base64 complete branch pointer pattern for a single byte.
@@ -53,34 +49,34 @@ alphabetAccessPattern val n = Pantomime.boolean $
 completeSingleByte :: Pantomime.Bool
 completeSingleByte = Pantomime.boolean $
   unsafePerformIO $ do
-    srcFp <- mallocPlainForeignPtrBytes 8
-    dstFp <- mallocPlainForeignPtrBytes 8
-    alphaFp <- mallocPlainForeignPtrBytes 64
+    srcFp <- mallocByteStringN 8
+    dstFp <- mallocByteStringN 8
+    alphaFp <- mallocByteStringN 64
 
-    withForeignPtr srcFp $ \sptr -> do
-      withForeignPtr dstFp $ \dptr -> do
-        withForeignPtr alphaFp $ \aptr -> do
+    withForeignPtrN srcFp $ \sptr -> do
+      withForeignPtrN dstFp $ \dptr -> do
+        withForeignPtrN alphaFp $ \aptr -> do
           poke8 sptr 65
 
           aByte <- peek8 sptr
           let aIdx = fromIntegral ((aByte .&. 0xfc) `shiftR` 2) :: Int
               bIdx = fromIntegral ((aByte .&. 0x03) `shiftL` 4) :: Int
 
-          poke8 (aptr `plusPtr` aIdx) 81
-          poke8 (aptr `plusPtr` bIdx) 81
+          poke8 (aptr `plusPtrN` aIdx) 81
+          poke8 (aptr `plusPtrN` bIdx) 81
 
-          aChar <- peek8 (aptr `plusPtr` aIdx)
-          bChar <- peek8 (aptr `plusPtr` bIdx)
+          aChar <- peek8 (aptr `plusPtrN` aIdx)
+          bChar <- peek8 (aptr `plusPtrN` bIdx)
 
           poke8 dptr aChar
-          poke8 (dptr `plusPtr` 1) bChar
-          poke8 (dptr `plusPtr` 2) 0x3d
-          poke8 (dptr `plusPtr` 3) 0x3d
+          poke8 (dptr `plusPtrN` 1) bChar
+          poke8 (dptr `plusPtrN` 2) 0x3d
+          poke8 (dptr `plusPtrN` 3) 0x3d
 
           r0 <- peek8 dptr
-          r1 <- peek8 (dptr `plusPtr` 1)
-          r2 <- peek8 (dptr `plusPtr` 2)
-          r3 <- peek8 (dptr `plusPtr` 3)
+          r1 <- peek8 (dptr `plusPtrN` 1)
+          r2 <- peek8 (dptr `plusPtrN` 2)
+          r3 <- peek8 (dptr `plusPtrN` 3)
 
           return (r0 == 81 && r1 == 81 && r2 == 0x3d && r3 == 0x3d)
 

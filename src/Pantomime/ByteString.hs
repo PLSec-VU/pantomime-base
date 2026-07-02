@@ -58,6 +58,7 @@ byteStringAxioms =
           ('mkBS, 'mkBSAxiom),
           ('alphabet, 'alphabetAxiom),
           ('mallocByteStringN, 'mallocByteStringAxiom),
+          ('unsafePerformIO, 'unsafePerformIOAxiom),
           ('runIO, 'unsafePerformIOAxiom),
           ('mkEncodeTable, 'mkEncodeTableAxiom)
         ]

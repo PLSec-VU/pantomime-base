@@ -12,6 +12,8 @@ where
 import Control.Exception.Base qualified as GHC (patError, throw)
 import Data.Constraint.Unsafe (unsafeSNat)
 import Data.List qualified as GHC (zip)
+import Unsafe.Coerce (unsafeCoerce#)
+import GHC.Stack (HasCallStack)
 import GHC.Base
   ( Addr#,
     Int (..),
@@ -262,6 +264,13 @@ axioms =
           ('GHC.gtWord#, 'gtWord#),
           ('GHC.leWord#, 'leWord#),
           ('GHC.ltWord#, 'ltWord#),
+          ('GHC.ltAddr#, 'ltAddr#),
+          ('GHC.leAddr#, 'leAddr#),
+          ('GHC.gtAddr#, 'gtAddr#),
+          ('GHC.geAddr#, 'geAddr#),
+          ('GHC.eqAddr#, 'eqAddr#),
+          ('GHC.neAddr#, 'neAddr#),
+          ('GHC.minusAddr#, 'minusAddr#),
           -- Word8# primitive operations.
           ------------------------------
           ('GHC.word8ToWord#, 'word8ToWord#),
@@ -363,7 +372,7 @@ axioms =
           ('GHC.naturalAdd, 'naturalAdd),
           ('GHC.naturalSubThrow, 'naturalSubThrow),
           ('GHC.noinline, 'noinline),
-          ('GHC.undefined, 'undefined),
+          ('GHC.error, 'errorAxiom),
           ('GHC.throw, 'throw),
           ('GHC.patError, 'patError'),
           ('GHC.withSomeSNat, 'withSomeSNat),
@@ -918,6 +927,41 @@ leWord# = compareWord# Pantomime.bvule
 ltWord# :: Word# -> Word# -> Int#
 ltWord# = compareWord# Pantomime.bvult
 
+compareAddr# ::
+  (BitVecPW -> BitVecPW -> Pantomime.Bool) ->
+  Addr# ->
+  Addr# ->
+  Int#
+compareAddr# f lhs rhs = do
+  let lhs' = Pantomime.fromWord# (unsafeCoerce# lhs :: Word#)
+  let rhs' = Pantomime.fromWord# (unsafeCoerce# rhs :: Word#)
+  bool2I# $ f lhs' rhs'
+
+
+ltAddr# :: Addr# -> Addr# -> Int#
+ltAddr# = compareAddr# Pantomime.bvult
+
+leAddr# :: Addr# -> Addr# -> Int#
+leAddr# = compareAddr# Pantomime.bvule
+
+gtAddr# :: Addr# -> Addr# -> Int#
+gtAddr# = compareAddr# $ flip Pantomime.bvult
+
+geAddr# :: Addr# -> Addr# -> Int#
+geAddr# = compareAddr# $ flip Pantomime.bvule
+
+eqAddr# :: Addr# -> Addr# -> Int#
+eqAddr# = compareAddr# Pantomime.bveq
+
+neAddr# :: Addr# -> Addr# -> Int#
+neAddr# = compareAddr# Pantomime.bvneq
+
+minusAddr# :: Addr# -> Addr# -> Int#
+minusAddr# lhs rhs = do
+  let lhs' = Pantomime.fromWord# (unsafeCoerce# lhs :: Word#)
+  let rhs' = Pantomime.fromWord# (unsafeCoerce# rhs :: Word#)
+  Pantomime.toInt# $ Pantomime.bvadd lhs' (Pantomime.bvneg rhs')
+
 word8ToWord# :: Word8# -> Word#
 word8ToWord# x = Pantomime.toWord# $ Pantomime.bvzext $ Pantomime.fromWord8# x
 
@@ -1332,6 +1376,10 @@ undefined = GHC.raise# ()
 -- FIXME: This is not actually the implementation for 'throw'.
 throw :: forall rep (a :: TYPE rep) e. e -> a
 throw = GHC.raise# ()
+
+-- | Axiom for 'error' (HasCallStack => [Char] -> a).
+errorAxiom :: forall rep (a :: TYPE rep). HasCallStack => [Char] -> a
+errorAxiom _ = GHC.raise# ()
 
 -- FIXME: This is not actually the implementation for 'patError'.
 patError' :: forall q (a :: TYPE q). Addr# -> a

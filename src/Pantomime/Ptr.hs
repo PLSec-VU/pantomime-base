@@ -14,10 +14,10 @@ module Pantomime.Ptr
     pokeByteAxiom,
   )
 where
-import Data.ByteString.Base64.Internal (peek8, poke8, mallocByteStringN, withForeignPtrN)
+import Data.ByteString.Base64.Internal (peek8, poke8, peek8_32, peekElemOff8, poke8_16, mallocByteStringN, withForeignPtrN, plusPtrN, castPtrN)
 import Data.Coerce (Coercible, coerce)
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
-import GHC.Word (Word8 (..))
+import GHC.Word (Word8 (..), Word32 (..))
 import Foreign.ForeignPtr (ForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Ptr (Ptr, castPtr, minusPtr, plusPtr)
 import GHC.Base (Int (I#))
@@ -39,9 +39,9 @@ type PtrWord = Pantomime.BitVec Pantomime.PlatformWordSize
 -- type, matching 'Ptr's phantom role. Fields are word-sized bitvectors to
 -- match 'Int' arithmetic and avoid cross-theory SMT conversions.
 data FakePtr a = FakePtr
-  { ptrId :: PtrWord
+  { ptrOff :: PtrWord
+  , ptrId :: PtrWord
   , ptrLen :: PtrWord
-  , ptrOff :: PtrWord
   }
 
 -- | A fake foreign pointer: (id, length). No offset until 'withForeignPtr'
@@ -61,13 +61,21 @@ ptrAxioms =
           ],
       termAxioms =
         [ ('plusPtr, 'plusPtrAxiom),
+          ('plusPtrN, 'plusPtrAxiom),
           ('minusPtr, 'minusPtrAxiom),
+          ('castPtr, 'castPtrAxiom),
+          ('castPtrN, 'castPtrAxiom),
           ('mallocByteStringN, 'mallocByteStringAxiom),
           ('mallocPlainForeignPtrBytes, 'mallocByteStringAxiom),
           ('withForeignPtrN, 'withForeignPtrAxiom),
           ('withForeignPtr, 'withForeignPtrAxiom),
           ('peek8, 'peekByteAxiom),
-          ('poke8, 'pokeByteAxiom)
+          ('peekByte, 'peekByteAxiom),
+          ('peek8_32, 'peek8_32Axiom),
+          ('peekElemOff8, 'peekElemOff8Axiom),
+          ('poke8, 'pokeByteAxiom),
+          ('pokeByte, 'pokeByteAxiom),
+          ('poke8_16, 'pokeByteAxiom)
         ]
     }
 
@@ -185,6 +193,37 @@ peekByteAxiom p =
       m :: io Word8
       m = coerce (FakeIO f)
   in coerce m
+
+-- | peek8_32 :: Ptr Word8 -> IO Word32
+-- Read a byte and zero-extend to Word32.
+peek8_32Axiom
+  :: forall ptr io
+   . Coercible FakePtr ptr
+  => Coercible FakeIO io
+  => ptr Word8
+  -> io Word32
+peek8_32Axiom p =
+  let f :: FakeWorld -> (# FakeWorld, Word32 #)
+      f s =
+        let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
+            arr = lookupHeap (heap s) (Pantomime.bvu2i ptrId)
+            val = Pantomime.aselect @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff)
+        in (# nextWorld s, W32# (Pantomime.toWord32# (Pantomime.bvzext @_ @32 val)) #)
+      m :: io Word32
+      m = coerce (FakeIO f)
+  in coerce m
+
+
+-- | peekElemOff8 :: Ptr Word8 -> Int -> IO Word8
+-- Read a byte at a given offset.
+peekElemOff8Axiom
+  :: forall ptr io
+   . Coercible FakePtr ptr
+  => Coercible FakeIO io
+  => ptr Word8
+  -> Int
+  -> io Word8
+peekElemOff8Axiom p n = peekByteAxiom (plusPtrAxiom p n)
 
 -- | pokeByte :: Ptr Word8 -> Word8 -> IO ()
 pokeByteAxiom
