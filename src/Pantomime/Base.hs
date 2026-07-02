@@ -350,8 +350,8 @@ axioms =
           ('GHC.or64#, 'or64#),
           ('GHC.xor64#, 'xor64#),
           ('GHC.not64#, 'not64#),
-          -- , ('GHC.uncheckedShiftL64#, 'uncheckedShiftL64#)
-          -- , ('GHC.uncheckedShiftRL64#, 'uncheckedShiftRL64#)
+          ('GHC.uncheckedShiftL64#, 'uncheckedShiftL64#),
+          ('GHC.uncheckedShiftRL64#, 'uncheckedShiftRL64#),
           ('GHC.eqWord64#, 'eqWord64#),
           ('GHC.neWord64#, 'neWord64#),
           ('GHC.geWord64#, 'geWord64#),
@@ -1217,6 +1217,18 @@ xor64# = binaryWord64# Pantomime.bvxor
 
 not64# :: Word64# -> Word64#
 not64# x = Pantomime.toWord64# $ Pantomime.bvnot $ Pantomime.fromWord64# x
+
+uncheckedShiftL64# :: Word64# -> Int# -> Word64#
+uncheckedShiftL64# val idx = do
+  let val' = Pantomime.fromWord64# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @64 $ Pantomime.fromInt# idx
+  Pantomime.toWord64# $ Pantomime.bvshl val' idx'
+
+uncheckedShiftRL64# :: Word64# -> Int# -> Word64#
+uncheckedShiftRL64# val idx = do
+  let val' = Pantomime.fromWord64# val
+  let idx' = Pantomime.bvsresize @Pantomime.PlatformWordSize @64 $ Pantomime.fromInt# idx
+  Pantomime.toWord64# $ Pantomime.bvlshr val' idx'
 
 compareWord64# ::
   (BitVec64 -> BitVec64 -> Pantomime.Bool) ->

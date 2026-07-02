@@ -89,6 +89,7 @@ test-suite pantomime-base-test
       Int8
       IntegerTest
       IOTest
+      IProuteTest
       PtrTest
       TestEncodeAnn
       Word
