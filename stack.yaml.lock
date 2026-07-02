@@ -491,4 +491,32 @@ packages:
       size: 941
   original:
     hackage: tf-random-0.5
+- completed:
+    hackage: iproute-1.7.13@sha256:db38adf1850f0d0e07458e907748abdf45a6f9befed5d29c331d4525dec1b036,1936
+    pantry-tree:
+      sha256: adaebd5c10dc0451ac1a90d04254d9dcea12ec6180c8473f341edbf1a4d9016e
+      size: 906
+  original:
+    hackage: iproute-1.7.13
+- completed:
+    hackage: appar-0.1.8@sha256:a5d529bacbb74d566e4c5f9479af0637eac5957705f6db4d2670517489795de8,1070
+    pantry-tree:
+      sha256: c8bae7bc8c04b6c3593b48f19f1d626face90832f268f6857aba934bccd4272d
+      size: 506
+  original:
+    hackage: appar-0.1.8
+- completed:
+    hackage: byteorder-1.0.4@sha256:a952817dcbe20af0346fb55a28c13e95e2ddbf3e99f9b4fffdc063f150f13b20,636
+    pantry-tree:
+      sha256: 1544dc41983f7fe963740d9a8ce2aec1daef17bcb0916fda253dbfa73a14c77a
+      size: 212
+  original:
+    hackage: byteorder-1.0.4
+- completed:
+    hackage: network-3.2.7.0@sha256:e3a1ec8b8dd32f1d5a541679a67de60d6626487a95f20c6bc245268ae7142ab7,5305
+    pantry-tree:
+      sha256: a6b96da036a806119e17bd90ab2ef499778cf727531e22f3274ae9970ea630cf
+      size: 4039
+  original:
+    hackage: network-3.2.7.0
 snapshots: []

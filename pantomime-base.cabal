@@ -139,6 +139,7 @@ test-suite pantomime-base-test
     , ghc-prim
     , hspec
     , hspec-expectations
+    , iproute
     , pantomime
     , pantomime-base
     , template-haskell
