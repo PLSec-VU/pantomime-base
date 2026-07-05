@@ -1,8 +1,8 @@
 module PtrTest (spec) where
 
 import Common
-import Data.ByteString.Base64.Internal (mallocByteStringN, withForeignPtrN, plusPtrN)
 import Foreign.ForeignPtr (ForeignPtr)
+import Pantomime.Ptr (mallocByteStringN, withForeignPtrN, plusPtrN)
 import Foreign.Ptr (Ptr, castPtr, minusPtr)
 import Pantomime.BuiltIn qualified as Pantomime
 import Pantomime.Ptr (peekByte, pokeByte)

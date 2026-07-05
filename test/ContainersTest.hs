@@ -7,8 +7,6 @@ import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Pantomime.BuiltIn qualified as Pantomime
 
--- Data.Map.Strict properties
-
 {-# ANN mapMemberEmpty (Theory axioms) #-}
 mapMemberEmpty :: Int -> Pantomime.Bool
 mapMemberEmpty k = Pantomime.boolean $ not (Map.member k (Map.empty :: Map.Map Int Int))
@@ -41,8 +39,6 @@ mapLookupDifferentKey k1 k2 v = Pantomime.boolean $
     implies False _ = True
     implies True  x = x
 
--- Data.Set properties
-
 {-# ANN setMemberEmpty (Theory axioms) #-}
 setMemberEmpty :: Int -> Pantomime.Bool
 setMemberEmpty k = Pantomime.boolean $ not (Set.member k Set.empty)
@@ -62,26 +58,15 @@ setDeleteSelf k = Pantomime.boolean $ not (Set.member k (Set.delete k (Set.singl
 spec :: Spec
 spec = describe "containers (Data.Map.Strict + Data.Set)" $ do
   describe "Data.Map.Strict" $ do
-    it "member k empty == False" $
-      $(pantomime 'mapMemberEmpty) `shouldBe` Nothing
-    it "member k (singleton k v) == True" $
-      $(pantomime 'mapMemberSingleton) `shouldBe` Nothing
-    it "lookup k (singleton k v) == Just v" $
-      $(pantomime 'mapLookupSingleton) `shouldBe` Nothing
-    it "member k (insert k v empty) == True" $
-      $(pantomime 'mapMemberInsert) `shouldBe` Nothing
-    it "lookup k (insert k v empty) == Just v" $
-      $(pantomime 'mapLookupInsert) `shouldBe` Nothing
-    it "null (delete k (singleton k v)) == True" $
-      $(pantomime 'mapDeleteSelf) `shouldBe` Nothing
-    it "k1 /= k2 implies lookup k1 (singleton k2 v) == Nothing" $
-      $(pantomime 'mapLookupDifferentKey) `shouldBe` Nothing
+    it "member k empty == False" $ $(pantomime 'mapMemberEmpty) `shouldBe` Nothing
+    it "member k (singleton k v) == True" $ $(pantomime 'mapMemberSingleton) `shouldBe` Nothing
+    it "lookup k (singleton k v) == Just v" $ $(pantomime 'mapLookupSingleton) `shouldBe` Nothing
+    it "member k (insert k v empty) == True" $ $(pantomime 'mapMemberInsert) `shouldBe` Nothing
+    it "lookup k (insert k v empty) == Just v" $ $(pantomime 'mapLookupInsert) `shouldBe` Nothing
+    it "null (delete k (singleton k v)) == True" $ $(pantomime 'mapDeleteSelf) `shouldBe` Nothing
+    it "k1 /= k2 implies lookup k1 (singleton k2 v) == Nothing" $ $(pantomime 'mapLookupDifferentKey) `shouldBe` Nothing
   describe "Data.Set" $ do
-    it "member k empty == False" $
-      $(pantomime 'setMemberEmpty) `shouldBe` Nothing
-    it "member k (singleton k) == True" $
-      $(pantomime 'setMemberSingleton) `shouldBe` Nothing
-    it "member k (insert k empty) == True" $
-      $(pantomime 'setMemberInsert) `shouldBe` Nothing
-    it "not (member k (delete k (singleton k))) == True" $
-      $(pantomime 'setDeleteSelf) `shouldBe` Nothing
+    it "member k empty == False" $ $(pantomime 'setMemberEmpty) `shouldBe` Nothing
+    it "member k (singleton k) == True" $ $(pantomime 'setMemberSingleton) `shouldBe` Nothing
+    it "member k (insert k empty) == True" $ $(pantomime 'setMemberInsert) `shouldBe` Nothing
+    it "not (member k (delete k (singleton k))) == True" $ $(pantomime 'setDeleteSelf) `shouldBe` Nothing

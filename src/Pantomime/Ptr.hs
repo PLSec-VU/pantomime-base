@@ -12,9 +12,13 @@ module Pantomime.Ptr
     pokeByte,
     peekByteAxiom,
     pokeByteAxiom,
+    mallocByteStringN,
+    withForeignPtrN,
+    plusPtrN,
+    castPtrN,
   )
 where
-import Data.ByteString.Base64.Internal (peek8, poke8, peek8_32, peekElemOff8, poke8_16, mallocByteStringN, withForeignPtrN, plusPtrN, castPtrN)
+import Data.ByteString.Internal (mallocByteString)
 import Data.Coerce (Coercible, coerce)
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 import GHC.Word (Word8 (..), Word32 (..))
@@ -69,13 +73,8 @@ ptrAxioms =
           ('mallocPlainForeignPtrBytes, 'mallocByteStringAxiom),
           ('withForeignPtrN, 'withForeignPtrAxiom),
           ('withForeignPtr, 'withForeignPtrAxiom),
-          ('peek8, 'peekByteAxiom),
           ('peekByte, 'peekByteAxiom),
-          ('peek8_32, 'peek8_32Axiom),
-          ('peekElemOff8, 'peekElemOff8Axiom),
-          ('poke8, 'pokeByteAxiom),
-          ('pokeByte, 'pokeByteAxiom),
-          ('poke8_16, 'pokeByteAxiom)
+          ('pokeByte, 'pokeByteAxiom)
         ]
     }
 
@@ -163,14 +162,26 @@ withForeignPtrAxiom fp k =
         in g s
   in coerce (FakeIO f)
 
--- | Monomorphic Word8 peek wrapper, axiomatizable without a 'Storable'
--- constraint. Mirrors @peek8 = peek@ from base64-bytestring.
+{-# NOINLINE mallocByteStringN #-}
+mallocByteStringN :: Int -> IO (ForeignPtr a)
+mallocByteStringN = mallocByteString
+
+{-# NOINLINE withForeignPtrN #-}
+withForeignPtrN :: ForeignPtr a -> (Ptr a -> IO b) -> IO b
+withForeignPtrN = withForeignPtr
+
+{-# NOINLINE plusPtrN #-}
+plusPtrN :: Ptr a -> Int -> Ptr b
+plusPtrN = plusPtr
+
+{-# NOINLINE castPtrN #-}
+castPtrN :: Ptr a -> Ptr b
+castPtrN = castPtr
+
 {-# NOINLINE peekByte #-}
 peekByte :: Ptr Word8 -> IO Word8
 peekByte = error "peekByte: axiom not resolved"
 
--- | Monomorphic Word8 poke wrapper, axiomatizable without a 'Storable'
--- constraint. Mirrors @poke8 = poke@ from base64-bytestring.
 {-# NOINLINE pokeByte #-}
 pokeByte :: Ptr Word8 -> Word8 -> IO ()
 pokeByte = error "pokeByte: axiom not resolved"
@@ -193,37 +204,6 @@ peekByteAxiom p =
       m :: io Word8
       m = coerce (FakeIO f)
   in coerce m
-
--- | peek8_32 :: Ptr Word8 -> IO Word32
--- Read a byte and zero-extend to Word32.
-peek8_32Axiom
-  :: forall ptr io
-   . Coercible FakePtr ptr
-  => Coercible FakeIO io
-  => ptr Word8
-  -> io Word32
-peek8_32Axiom p =
-  let f :: FakeWorld -> (# FakeWorld, Word32 #)
-      f s =
-        let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
-            arr = lookupHeap (heap s) (Pantomime.bvu2i ptrId)
-            val = Pantomime.aselect @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff)
-        in (# nextWorld s, W32# (Pantomime.toWord32# (Pantomime.bvzext @_ @32 val)) #)
-      m :: io Word32
-      m = coerce (FakeIO f)
-  in coerce m
-
-
--- | peekElemOff8 :: Ptr Word8 -> Int -> IO Word8
--- Read a byte at a given offset.
-peekElemOff8Axiom
-  :: forall ptr io
-   . Coercible FakePtr ptr
-  => Coercible FakeIO io
-  => ptr Word8
-  -> Int
-  -> io Word8
-peekElemOff8Axiom p n = peekByteAxiom (plusPtrAxiom p n)
 
 -- | pokeByte :: Ptr Word8 -> Word8 -> IO ()
 pokeByteAxiom

@@ -31,6 +31,7 @@ import GHC.Base
     Word8#,
   )
 import GHC.Base qualified as GHC
+import GHC.Classes qualified as GHCClasses
 import GHC.Exts (IsList (..))
 import GHC.Magic (lazy)
 import GHC.Num (Integer (..), Natural (..))
@@ -374,6 +375,11 @@ axioms =
           ('GHC.naturalSubThrow, 'naturalSubThrow),
           ('GHC.noinline, 'noinline),
           ('lazy, 'lazyId),
+          -- compare*# check equality first so bveq can short-circuit,
+          -- avoiding symbolic branching on the less-than path that would
+          -- expose ptrEq inside containers' balancing code.
+          ('GHCClasses.compareInt#, 'compareIntImpl),
+          ('GHCClasses.compareWord#, 'compareWordImpl),
           ('GHC.error, 'errorAxiom),
           ('GHC.throw, 'throw),
           ('GHC.patError, 'patError'),
@@ -1385,6 +1391,18 @@ noinline = id
 
 lazyId :: a -> a
 lazyId = id
+
+compareIntImpl :: Int# -> Int# -> Ordering
+compareIntImpl x y =
+  if GHC.isTrue# (x ==# y) then EQ
+  else if GHC.isTrue# (x <# y) then LT
+  else GT
+
+compareWordImpl :: Word# -> Word# -> Ordering
+compareWordImpl x y =
+  if GHC.isTrue# (eqWord# x y) then EQ
+  else if GHC.isTrue# (ltWord# x y) then LT
+  else GT
 
 
 -- FIXME: This is not actually the implementation for 'undefined'.

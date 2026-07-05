@@ -12,7 +12,6 @@ extra-deps:
   - async-2.2.6
   - atomic-primops-0.8.8
   - base16-bytestring-1.0.2.0
-  - /tmp/base64-bytestring
   - bytes-0.17.5
   - cereal-0.5.8.3
   - cereal-text-0.1.0.2

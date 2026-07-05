@@ -4,7 +4,6 @@ module Common
   ( checkInvalid
   , todo
   , axioms
-  , byteStringAxioms
   , ioAxioms
   , ptrAxioms
   , module Test.Hspec
@@ -21,7 +20,6 @@ import Pantomime.Base (axioms)
 import Pantomime (Theory (..), pantomime)
 import Pantomime.IO (ioAxioms)
 import Pantomime.Ptr (ptrAxioms)
-import Pantomime.ByteString (byteStringAxioms)
 import Pantomime.BuiltIn qualified as Pantomime
 
 import GHC.Exts
