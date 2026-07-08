@@ -97,6 +97,64 @@ pokeOverwrite v1 v2 = Pantomime.boolean $
       r <- peekByte p
       return (r == v2)
 
+-- | poke at symbolic offset m, peek at symbolic offset n: if m /= n, the
+-- write is not observed. Generalizes 'pokePeekDistinctOffsets' from a fixed
+-- literal offset to arbitrary symbolic offsets.
+{-# ANN pokePeekDistinctSymbolicOffsets (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekDistinctSymbolicOffsets :: Int -> Int -> Word8 -> Pantomime.Bool
+pokePeekDistinctSymbolicOffsets m n v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteStringN 16 :: IO (ForeignPtr Word8)
+    withForeignPtrN fp $ \p -> do
+      pokeByte (plusPtrN p m) v
+      r <- peekByte (plusPtrN p n)
+      return ((m /= n) `implies` (r == 0))
+  where
+    implies False _ = True
+    implies True  x = x
+
+-- | poke at (p + m) + n, peek at p + (m + n): the same cell reached via two
+-- different arithmetic paths is still the same cell.
+{-# ANN pokePeekNestedArithmetic (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekNestedArithmetic :: Int -> Int -> Word8 -> Pantomime.Bool
+pokePeekNestedArithmetic m n v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteStringN 16 :: IO (ForeignPtr Word8)
+    withForeignPtrN fp $ \p -> do
+      pokeByte (plusPtrN (plusPtrN p m) n) v
+      r <- peekByte (plusPtrN p (m + n))
+      return (r == v)
+
+-- | poke through p, peek through castPtr (castPtr p): a round-trip cast
+-- through another element type still observes the write, since castPtr
+-- retypes the phantom without changing the underlying address.
+{-# ANN pokePeekThroughCast (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekThroughCast :: Word8 -> Pantomime.Bool
+pokePeekThroughCast v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fp <- mallocByteStringN 8 :: IO (ForeignPtr Word8)
+    withForeignPtrN fp $ \p -> do
+      pokeByte p v
+      let p' = castPtr (castPtr p :: Ptr Word16) :: Ptr Word8
+      r <- peekByte p'
+      return (r == v)
+
+-- | poke into buffer A at offset k, peek from a distinct buffer B at the
+-- same offset k: does NOT see the write. Unlike 'pokePeekDistinctOffsets'
+-- and 'pokePeekDistinctSymbolicOffsets', this separates cells by allocation
+-- id rather than by offset within one allocation.
+{-# ANN pokePeekDistinctAllocations (Theory (axioms <> ioAxioms <> ptrAxioms)) #-}
+pokePeekDistinctAllocations :: Int -> Word8 -> Pantomime.Bool
+pokePeekDistinctAllocations k v = Pantomime.boolean $
+  unsafePerformIO $ do
+    fpA <- mallocByteStringN 8 :: IO (ForeignPtr Word8)
+    fpB <- mallocByteStringN 8 :: IO (ForeignPtr Word8)
+    withForeignPtrN fpA $ \pa ->
+      withForeignPtrN fpB $ \pb -> do
+        pokeByte (plusPtrN pa k) v
+        r <- peekByte (plusPtrN pb k)
+        return (r == 0)
+
 spec :: Spec
 spec = describe "Pointer axioms" $ do
   it "plusPtr/minusPtr round-trip" $
@@ -119,3 +177,11 @@ spec = describe "Pointer axioms" $ do
     $(pantomime 'pokePeekDistinctOffsets) `shouldBe` Nothing
   it "poke overwrites previous value" $
     $(pantomime 'pokeOverwrite) `shouldBe` Nothing
+  it "poke/peek at distinct symbolic offsets does not alias" $
+    $(pantomime 'pokePeekDistinctSymbolicOffsets) `shouldBe` Nothing
+  it "poke/peek through nested arithmetic reaches the same cell" $
+    $(pantomime 'pokePeekNestedArithmetic) `shouldBe` Nothing
+  it "poke/peek through a round-trip castPtr sees the write" $
+    $(pantomime 'pokePeekThroughCast) `shouldBe` Nothing
+  it "poke/peek across distinct allocations does not alias" $
+    $(pantomime 'pokePeekDistinctAllocations) `shouldBe` Nothing
