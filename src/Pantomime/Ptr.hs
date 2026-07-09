@@ -29,10 +29,11 @@ import GHC.Exts (IsList (..))
 import Pantomime (PluginAxioms (..))
 import Pantomime.BuiltIn qualified as Pantomime
 import Pantomime.IO
-  ( FakeHeap (..),
-    FakeIO (..),
+  ( FakeIO (..),
     FakeWorld (..),
     nextWorld,
+    append,
+    updateAt,
   )
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -128,24 +129,22 @@ mallocByteStringAxiom
 mallocByteStringAxiom n =
   let f :: FakeWorld -> (# FakeWorld, FakeForeignPtr a #)
       f s =
-        let h = heap s
-            newId = heapNext h
+        let newId = time s
             zeroByte = 0 :: Pantomime.BitVec 8
             arr = Pantomime.aconst @Pantomime.Integer @(Pantomime.BitVec 8) zeroByte
-            h' = h {heapNext = newId + 1, heapMem = Pantomime.astore @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) newId arr}
-            s' = s {heap = h'}
+            s' = s {time = newId + 1, refs = append (refs s) [unsafeCoerce arr]}
             fptr = FakeForeignPtr
               { fptrId = Pantomime.i2bv @Pantomime.PlatformWordSize newId
               , fptrLen = Pantomime.fromInt# (case n of I# i# -> i#)
               }
-        in (# nextWorld s', fptr #)
+        in (# s', fptr #)
       m :: io (FakeForeignPtr a)
       m = coerce (FakeIO f)
   in coerce m
 
 -- | withForeignPtr :: ForeignPtr a -> (Ptr a -> IO b) -> IO b
 -- Materialize a fake pointer at offset 0 with the full length, run the
--- callback in the same FakeIO so heap effects thread through.
+-- callback in the same FakeIO so ref effects thread through.
 withForeignPtrAxiom
   :: forall a b io
    . Coercible FakeIO io
@@ -187,7 +186,7 @@ pokeByte :: Ptr Word8 -> Word8 -> IO ()
 pokeByte = error "pokeByte: axiom not resolved"
 
 -- | peekByte :: Ptr Word8 -> IO Word8
--- Read a single byte from the heap at the pointer's offset.
+-- Read a single byte from the pointer's backing array at the pointer's offset.
 peekByteAxiom
   :: forall ptr io
    . Coercible FakePtr ptr
@@ -198,7 +197,8 @@ peekByteAxiom p =
   let f :: FakeWorld -> (# FakeWorld, Word8 #)
       f s =
         let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
-            arr = lookupHeap (heap s) (Pantomime.bvu2i ptrId)
+            idx = fromIntegral (Pantomime.toInteger (Pantomime.bvu2i ptrId))
+            arr = unsafeCoerce (refs s !! idx) :: Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
             val = Pantomime.aselect @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff)
         in (# nextWorld s, W8# (Pantomime.toWord8# val) #)
       m :: io Word8
@@ -217,29 +217,11 @@ pokeByteAxiom p (W8# w#) =
   let f :: FakeWorld -> (# FakeWorld, () #)
       f s =
         let FakePtr {ptrId, ptrOff} = coerce p :: FakePtr Word8
-            h = heap s
-            arr = lookupHeap h (Pantomime.bvu2i ptrId)
+            idx = fromIntegral (Pantomime.toInteger (Pantomime.bvu2i ptrId))
+            arr = unsafeCoerce (refs s !! idx) :: Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
             arr' = Pantomime.astore @Pantomime.Integer @(Pantomime.BitVec 8) arr (Pantomime.bvu2i ptrOff) (Pantomime.fromWord8# w#)
-            h' = updateHeap h (Pantomime.bvu2i ptrId) arr'
-            s' = s {heap = h'}
+            s' = s {refs = updateAt idx (unsafeCoerce arr') (refs s)}
         in (# nextWorld s', () #)
       m :: io ()
       m = coerce (FakeIO f)
   in coerce m
-
--- | Lookup the byte array for a given pointer id in the heap. Since the
--- heap is a symbolic array, this is a direct 'aselect'.
-lookupHeap
-  :: FakeHeap
-  -> Pantomime.Integer
-  -> Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
-lookupHeap h i = Pantomime.aselect @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) i
-
--- | Update the byte array for a given pointer id in the heap. Since the
--- heap is a symbolic array, this is a direct 'astore'.
-updateHeap
-  :: FakeHeap
-  -> Pantomime.Integer
-  -> Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)
-  -> FakeHeap
-updateHeap h i arr = h {heapMem = Pantomime.astore @Pantomime.Integer @(Pantomime.Array Pantomime.Integer (Pantomime.BitVec 8)) (heapMem h) i arr}
