@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.39.1.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
       Pantomime.Base
+      Pantomime.IO
+      Pantomime.Ptr
   other-modules:
       Paths_pantomime_base
   autogen-modules:
@@ -60,9 +62,82 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , composition
     , constraints
     , ghc-bignum
+    , ghc-internal
     , ghc-prim
     , pantomime
+    , template-haskell
+  default-language: Haskell2010
+
+test-suite pantomime-base-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      BoolTest
+      ByteStringTest
+      Common
+      ContainersTest
+      Int
+      Int16
+      Int32
+      Int64
+      Int8
+      IntegerTest
+      IOTest
+      IProuteTest
+      PtrTest
+      Word
+      Word64
+      Word8
+      Paths_pantomime_base
+  autogen-modules:
+      Paths_pantomime_base
+  hs-source-dirs:
+      test
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      ConstraintKinds
+      DataKinds
+      DeriveDataTypeable
+      DeriveTraversable
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      ImportQualifiedPost
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeAbstractions
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      MagicHash
+      UnboxedTuples
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wprepositive-qualified-module -fexpose-all-unfoldings -threaded -rtsopts -with-rtsopts=-N -fplugin=Pantomime
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , composition
+    , constraints
+    , containers
+    , ghc-bignum
+    , ghc-internal
+    , ghc-prim
+    , hspec
+    , hspec-expectations
+    , iproute
+    , pantomime
+    , pantomime-base
+    , template-haskell
   default-language: Haskell2010
